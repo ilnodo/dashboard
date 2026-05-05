@@ -123,6 +123,31 @@ hr { border: none; border-top: 1px solid #eee; margin: 16px 0; }
 .config-banner { background: #fff3cd; border: 1px solid #ffc107; border-radius: 8px; padding: 12px 14px; font-size: 13px; color: #856404; margin-bottom: 12px; }
 .config-banner code { background: #fff; padding: 1px 5px; border-radius: 4px; font-size: 12px; }
 
+/* Dimensioni custom */
+.dim-item { display: flex; align-items: center; gap: 8px; padding: 9px 0; border-bottom: 1px solid #f0f0f0; }
+.dim-item:last-child { border-bottom: none; }
+.dim-item .dim-name { flex: 1; font-size: 14px; font-weight: bold; color: #222; }
+.dim-tipo-pill { font-size: 11px; padding: 2px 9px; border-radius: 10px; background: #e8f4f0; color: #0a5c47; font-weight: bold; white-space: nowrap; }
+.dim-btn { padding: 4px 10px; border: 1px solid #ddd; border-radius: 6px; font-size: 12px; cursor: pointer; background: white; color: #444; }
+.dim-btn-del { border-color: #f5c6cb; color: #c62828; }
+.dim-btn-del:hover { background: #fce4ec; }
+.tipo-selector { display: flex; gap: 8px; margin: 6px 0 10px; }
+.tipo-btn { flex: 1; padding: 10px 4px; border: 1.5px solid #ddd; border-radius: 8px; cursor: pointer; font-size: 12px; background: white; text-align: center; color: #555; font-family: Arial; }
+.tipo-btn.selected { background: #e8f4f0; border-color: #0a5c47; color: #0a5c47; font-weight: bold; }
+.score-btn.active-custom { background: #e8f4f0; border-color: #0a5c47; color: #0a5c47; font-weight: bold; }
+.score-btn.active-si { background: #e8f5e9; border-color: #2e7d32; color: #2e7d32; font-weight: bold; }
+.score-btn.active-no { background: #ffebee; border-color: #c62828; color: #c62828; font-weight: bold; }
+.presets { display: flex; gap: 5px; flex-wrap: wrap; margin-bottom: 6px; }
+.preset-btn { padding: 4px 10px; border: 1px solid #cde8df; border-radius: 12px; font-size: 12px; cursor: pointer; background: #f0f7f4; color: #0a5c47; font-family: Arial; }
+.preset-btn:hover { background: #d8ede6; }
+
+/* Numbered editor */
+.numbered-editor { display: flex; border: 1px solid #ddd; border-radius: 8px; overflow: hidden; background: white; }
+.numbered-editor:focus-within { outline: 2px solid #0a5c47; border-color: #0a5c47; }
+.line-nums { background: #f0f7f4; color: #0a5c47; padding: 9px 8px 9px 10px; text-align: right; user-select: none; font-size: 13px; font-family: Arial; line-height: 1.65em; border-right: 1px solid #d0e8df; min-width: 34px; }
+.line-nums span { display: block; font-weight: bold; }
+.numbered-editor textarea { flex: 1; border: none; border-radius: 0; padding: 9px 12px; resize: none; font-size: 14px; font-family: Arial; line-height: 1.65em; outline: none; background: transparent; color: #222; width: 100%; }
+
 @media (max-width: 400px) {
   .stats { grid-template-columns: 1fr 1fr; }
 }
@@ -223,21 +248,38 @@ hr { border: none; border-top: 1px solid #eee; margin: 16px 0; }
       <div class="card">
         <div class="sec-title">Lista ospiti</div>
         <p style="font-size:13px;color:#666;margin-bottom:10px;">Un nome per riga.</p>
-        <textarea id="ospiteListEdit" rows="18"></textarea>
+        <div class="numbered-editor">
+          <div class="line-nums" id="ospiteListEdit-lines"></div>
+          <textarea id="ospiteListEdit" rows="18" oninput="updateLineNums('ospiteListEdit')"></textarea>
+        </div>
         <button class="btn btn-primary" onclick="saveOspiti()">Salva lista ospiti</button>
       </div>
       <div class="card">
         <div class="sec-title">Attività laboratorio</div>
         <p style="font-size:13px;color:#666;margin-bottom:10px;">Una per riga.</p>
-        <textarea id="attivitaEdit" rows="10"></textarea>
+        <div class="numbered-editor">
+          <div class="line-nums" id="attivitaEdit-lines"></div>
+          <textarea id="attivitaEdit" rows="10" oninput="updateLineNums('attivitaEdit')"></textarea>
+        </div>
         <button class="btn btn-primary" onclick="saveAttivita()">Salva attività</button>
       </div>
       <div class="card">
         <div class="sec-title">Mansioni domestiche</div>
         <p style="font-size:13px;color:#666;margin-bottom:10px;">Una per riga.</p>
-        <textarea id="mansioniEdit" rows="8"></textarea>
+        <div class="numbered-editor">
+          <div class="line-nums" id="mansioniEdit-lines"></div>
+          <textarea id="mansioniEdit" rows="8" oninput="updateLineNums('mansioniEdit')"></textarea>
+        </div>
         <button class="btn btn-primary" onclick="saveMansioni()">Salva mansioni</button>
       </div>
+      <div class="card">
+        <div class="sec-title">Dimensioni di valutazione</div>
+        <p style="font-size:13px;color:#666;margin-bottom:10px;">Aggiungi aree personalizzate da valutare per ogni ospite, con il metodo che preferisci.</p>
+        <div id="dimList"></div>
+        <button class="btn btn-secondary" style="margin-top:8px;" onclick="showAddDimForm(null)">+ Aggiungi dimensione</button>
+        <div id="dimFormContainer" style="display:none;margin-top:14px;border-top:1px solid #eee;padding-top:14px;"></div>
+      </div>
+
       <div class="card">
         <div class="sec-title">Account</div>
         <p style="font-size:13px;color:#666;" id="accountInfo"></p>
@@ -256,7 +298,7 @@ hr { border: none; border-top: 1px solid #eee; margin: 16px 0; }
 const DROPBOX_APP_KEY = '5irp6ds6jip9snz';
 // Il redirect URI deve corrispondere ESATTAMENTE all'URL della tua
 // pagina GitHub Pages, es: https://tuonome.github.io/ilnodo/
-const REDIRECT_URI = "https://ilnodo.github.io/dashboard/";
+const REDIRECT_URI = window.location.origin + window.location.pathname;
 
 // ============================================================
 // DATI DEFAULT
@@ -275,12 +317,12 @@ const DEFAULT_MANSIONI = [
   "Pulizia camera","Colazione","Cucina","Refettorio / piatti",
   "Lavaggio piatti","Pulizia spazi comuni","Corridoio","Tisane","Giro menù"
 ];
-const DBX_PATH = "/il_nodo_data.json"; // App folder: salva in Apps/IlNodoDashboard/
+const DBX_PATH = "/il_nodo_data.json";
 
 // ============================================================
 // STATO
 // ============================================================
-let db = { ospiti: [], attivita: [], mansioni: [], settimane: {} };
+let db = { ospiti: [], attivita: [], mansioni: [], dimensioni: [], settimane: {} };
 let currentWeek = getTodayWeek();
 let accessToken = null;
 let currentFormState = {};
@@ -388,6 +430,7 @@ async function dbxLoad() {
     if (!db.ospiti?.length) db.ospiti = [...DEFAULT_OSPITI];
     if (!db.attivita?.length) db.attivita = [...DEFAULT_ATTIVITA];
     if (!db.mansioni?.length) db.mansioni = [...DEFAULT_MANSIONI];
+    if (!db.dimensioni) db.dimensioni = [];
     if (!db.settimane) db.settimane = {};
   } catch(e) {
     console.warn('dbxLoad:', e);
@@ -429,6 +472,7 @@ async function init(token) {
   db.ospiti = [...DEFAULT_OSPITI];
   db.attivita = [...DEFAULT_ATTIVITA];
   db.mansioni = [...DEFAULT_MANSIONI];
+  db.dimensioni = [];
   db.settimane = {};
 
   document.getElementById('loginScreen').style.display = 'none';
@@ -528,11 +572,23 @@ function renderFormOspite() {
   const saved = db.settimane[currentWeek]?.[ospite] || {};
   // Inizializza lo stato del form dai dati salvati
   if (!currentFormState[ospite]) {
-    currentFormState[ospite] = { attivita: {}, mansioni: {}, puliziaCamera: '' };
+    currentFormState[ospite] = { attivita: {}, mansioni: {}, puliziaCamera: '', dimensioni: {} };
     (saved.attivita || []).forEach(a => { if (a.voto) currentFormState[ospite].attivita[a.nome] = a.voto; });
     (saved.mansioni || []).forEach(m => { if (m.voto) currentFormState[ospite].mansioni[m.nome] = m.voto; });
     currentFormState[ospite].puliziaCamera = saved.puliziaCamera || '';
+    const savedDims = saved.dimensioni || {};
+    (db.dimensioni || []).forEach(d => {
+      currentFormState[ospite].dimensioni[d.id] = savedDims[d.id] || '';
+    });
   }
+  // Aggiorna dimensioni se ne sono state aggiunte dopo l'apertura del form
+  if (!currentFormState[ospite].dimensioni) currentFormState[ospite].dimensioni = {};
+  const savedDims = saved.dimensioni || {};
+  (db.dimensioni || []).forEach(d => {
+    if (currentFormState[ospite].dimensioni[d.id] === undefined) {
+      currentFormState[ospite].dimensioni[d.id] = savedDims[d.id] || '';
+    }
+  });
 
   let html = `<div class="ospite-header" style="padding:0 0 4px;">
     <div class="ospite-avatar">${initials(ospite)}</div>
@@ -576,6 +632,30 @@ function renderFormOspite() {
       <button class="score-btn ${pc==='-'?'active-minus':''}" onclick="setScore('pulizia','0','-','camera')">− Non fatta</button>
     </div></div>`;
 
+  // DIMENSIONI PERSONALIZZATE
+  if (db.dimensioni && db.dimensioni.length > 0) {
+    db.dimensioni.forEach((dim, di) => {
+      const val = currentFormState[ospite].dimensioni[dim.id] || '';
+      const scala = (dim.scala || '1,2,3,4,5').split(',').map(s => s.trim()).filter(Boolean);
+      html += `<div class="card"><div class="sec-title">${dim.nome}</div>`;
+      if (dim.tipo === 'likert') {
+        html += `<div class="score-group" id="dim_${di}">`;
+        scala.forEach(s => {
+          html += `<button class="score-btn ${val===s?'active-custom':''}" onclick="setDimScore('${dim.id}',${di},${JSON.stringify(s)})">${s}</button>`;
+        });
+        html += `</div>`;
+      } else if (dim.tipo === 'sinono') {
+        html += `<div class="score-group" id="dim_${di}">
+          <button class="score-btn ${val==='Sì'?'active-si':''}" onclick="setDimScore('${dim.id}',${di},'Sì')">Sì</button>
+          <button class="score-btn ${val==='No'?'active-no':''}" onclick="setDimScore('${dim.id}',${di},'No')">No</button>
+        </div>`;
+      } else {
+        html += `<textarea id="dim_text_${dim.id}" placeholder="Descrizione libera…">${val}</textarea>`;
+      }
+      html += `</div>`;
+    });
+  }
+
   // NOTE
   html += `<div class="card"><div class="sec-title">Note (max 2–3 righe)</div>
     <textarea id="noteOspite" maxlength="300" placeholder="Osservazioni brevi...">${saved.note || ''}</textarea>
@@ -615,6 +695,23 @@ function setScore(tipo, idx, valore, nome) {
   }
 }
 
+function setDimScore(dimId, idx, valore) {
+  const ospite = document.getElementById('selOspite').value;
+  if (!ospite) return;
+  if (!currentFormState[ospite].dimensioni) currentFormState[ospite].dimensioni = {};
+  currentFormState[ospite].dimensioni[dimId] = valore;
+  const grp = document.getElementById(`dim_${idx}`);
+  if (!grp) return;
+  const dim = (db.dimensioni || []).find(d => d.id === dimId);
+  grp.querySelectorAll('.score-btn').forEach(b => {
+    b.className = 'score-btn';
+    if (b.textContent.trim() === valore) {
+      if (dim?.tipo === 'sinono') b.classList.add(valore === 'Sì' ? 'active-si' : 'active-no');
+      else b.classList.add('active-custom');
+    }
+  });
+}
+
 async function saveOspiteData() {
   const ospite = document.getElementById('selOspite').value;
   if (!ospite) return;
@@ -625,8 +722,18 @@ async function saveOspiteData() {
   const mansioni = db.mansioni.map(man => ({ nome: man, voto: state.mansioni?.[man] || '' }));
   const note = document.getElementById('noteOspite')?.value.trim() || '';
 
+  const dimensioni = {};
+  (db.dimensioni || []).forEach(d => {
+    if (d.tipo === 'testo') {
+      const el = document.getElementById(`dim_text_${d.id}`);
+      dimensioni[d.id] = el?.value.trim() || '';
+    } else {
+      dimensioni[d.id] = state.dimensioni?.[d.id] || '';
+    }
+  });
+
   db.settimane[currentWeek][ospite] = {
-    attivita, mansioni, note,
+    attivita, mansioni, dimensioni, note,
     puliziaCamera: state.puliziaCamera || '',
     _compilato: true,
     _savedAt: new Date().toISOString()
@@ -725,6 +832,15 @@ function generaSintesi(ospite, dati) {
   if (pc === '+') parti.push(`La pulizia della camera è stata effettuata.`);
   else if (pc === '-') parti.push(`<strong>La pulizia della camera non è stata effettuata.</strong>`);
 
+  const dims = dati.dimensioni || {};
+  (db.dimensioni || []).forEach(d => {
+    const v = dims[d.id];
+    if (v) {
+      if (d.tipo === 'testo') parti.push(`${d.nome}: ${v}.`);
+      else parti.push(`${d.nome}: <strong>${v}</strong>.`);
+    }
+  });
+
   const badges = [];
   if (tot > 0) {
     if (n1 >= Math.ceil(tot * 0.6)) badges.push({tipo:'green', label:'Partecipazione attiva'});
@@ -803,12 +919,120 @@ function toggleStorico(w, el) {
 // ============================================================
 // IMPOSTAZIONI
 // ============================================================
+function updateLineNums(id) {
+  const ta = document.getElementById(id);
+  const lns = document.getElementById(id + '-lines');
+  if (!lns) return;
+  const count = ta.value === '' ? 1 : ta.value.split('\n').length;
+  lns.innerHTML = Array.from({length: count}, (_, i) => `<span>${i + 1}</span>`).join('');
+}
+
 function renderImpostazioni() {
   document.getElementById('ospiteListEdit').value = db.ospiti.join('\n');
   document.getElementById('attivitaEdit').value = db.attivita.join('\n');
   document.getElementById('mansioniEdit').value = db.mansioni.join('\n');
   document.getElementById('accountInfo').textContent =
     `Connesso a Dropbox. I dati sono salvati su il_nodo_data.json nel tuo account.`;
+  updateLineNums('ospiteListEdit');
+  updateLineNums('attivitaEdit');
+  updateLineNums('mansioniEdit');
+  renderDimensioni();
+}
+
+// ============================================================
+// DIMENSIONI PERSONALIZZATE
+// ============================================================
+const TIPO_LABEL = { likert: '📊 Scala', sinono: '✅ Sì / No', testo: '✏️ Testo libero' };
+
+function renderDimensioni() {
+  const list = document.getElementById('dimList');
+  if (!list) return;
+  if (!db.dimensioni || !db.dimensioni.length) {
+    list.innerHTML = '<div class="empty" style="padding:12px 0 4px;">Nessuna dimensione aggiuntiva.<br>Usa il pulsante sotto per aggiungerne una.</div>';
+    return;
+  }
+  list.innerHTML = db.dimensioni.map(d => `
+    <div class="dim-item">
+      <div class="dim-name">${d.nome}</div>
+      <span class="dim-tipo-pill">${TIPO_LABEL[d.tipo] || d.tipo}</span>
+      <button class="dim-btn" onclick="showAddDimForm('${d.id}')">✏️</button>
+      <button class="dim-btn dim-btn-del" onclick="deleteDim('${d.id}')">✕</button>
+    </div>`).join('');
+}
+
+function showAddDimForm(editId) {
+  const container = document.getElementById('dimFormContainer');
+  container.style.display = 'block';
+  const d = editId ? (db.dimensioni || []).find(x => x.id === editId) : null;
+  const nome = d?.nome || '';
+  const tipo = d?.tipo || 'likert';
+  const scala = d?.scala || '1,2,3,4,5';
+  container.innerHTML = `
+    <label style="margin-top:0;">Nome dimensione</label>
+    <input type="text" id="dimNome" value="${nome}" placeholder="es. Motivazione, Igiene personale, Relazioni…">
+    <label style="margin-top:10px;">Tipo di valutazione</label>
+    <div class="tipo-selector">
+      <button class="tipo-btn ${tipo==='likert'?'selected':''}" data-tipo="likert" onclick="selectTipo('likert',this)">📊<br>Scala</button>
+      <button class="tipo-btn ${tipo==='sinono'?'selected':''}" data-tipo="sinono" onclick="selectTipo('sinono',this)">✅<br>Sì / No</button>
+      <button class="tipo-btn ${tipo==='testo'?'selected':''}" data-tipo="testo" onclick="selectTipo('testo',this)">✏️<br>Testo libero</button>
+    </div>
+    <div id="dimScalaOpts" style="display:${tipo==='likert'?'block':'none'};">
+      <label>Valori scala (separati da virgola)</label>
+      <div class="presets">
+        <button class="preset-btn" onclick="setScalaPreset('1,2,3')">1–3</button>
+        <button class="preset-btn" onclick="setScalaPreset('1,2,3,4,5')">1–5</button>
+        <button class="preset-btn" onclick="setScalaPreset('1,2,3,4,5,6,7,8,9,10')">1–10</button>
+        <button class="preset-btn" onclick="setScalaPreset('Mai,Raramente,A volte,Spesso,Sempre')">Mai→Sempre</button>
+        <button class="preset-btn" onclick="setScalaPreset('Insufficiente,Sufficiente,Buono,Ottimo')">4 livelli</button>
+        <button class="preset-btn" onclick="setScalaPreset('Basso,Medio,Alto')">Basso→Alto</button>
+      </div>
+      <input type="text" id="dimScala" value="${scala}" placeholder="es. 1,2,3 oppure Mai,A volte,Sempre">
+    </div>
+    <div style="display:flex;gap:8px;margin-top:14px;">
+      <button class="btn btn-primary" style="flex:1;" onclick="saveDim('${editId||''}')">Salva dimensione</button>
+      <button class="btn btn-secondary" style="flex:0 0 auto;width:auto;padding:12px 18px;" onclick="closeDimForm()">Annulla</button>
+    </div>`;
+}
+
+function selectTipo(tipo, btn) {
+  document.querySelectorAll('#dimFormContainer .tipo-btn').forEach(b => b.classList.remove('selected'));
+  btn.classList.add('selected');
+  document.getElementById('dimScalaOpts').style.display = tipo === 'likert' ? 'block' : 'none';
+}
+
+function setScalaPreset(val) {
+  document.getElementById('dimScala').value = val;
+}
+
+function closeDimForm() {
+  document.getElementById('dimFormContainer').style.display = 'none';
+}
+
+async function saveDim(editId) {
+  const nome = document.getElementById('dimNome').value.trim();
+  if (!nome) { alert('Inserisci un nome per la dimensione'); return; }
+  const tipoBtn = document.querySelector('#dimFormContainer .tipo-btn.selected');
+  const tipo = tipoBtn?.dataset.tipo || 'likert';
+  const scala = document.getElementById('dimScala')?.value.trim() || '1,2,3,4,5';
+  if (!db.dimensioni) db.dimensioni = [];
+  if (editId) {
+    const idx = db.dimensioni.findIndex(d => d.id === editId);
+    if (idx >= 0) db.dimensioni[idx] = { ...db.dimensioni[idx], nome, tipo, scala };
+  } else {
+    db.dimensioni.push({ id: 'dim_' + Date.now(), nome, tipo, scala });
+  }
+  closeDimForm();
+  await dbxSave();
+  renderDimensioni();
+  showToast('Dimensione salvata ✓');
+}
+
+async function deleteDim(id) {
+  if (!confirm('Eliminare questa dimensione? I dati già salvati resteranno nell\'archivio ma non saranno più visibili.')) return;
+  db.dimensioni = (db.dimensioni || []).filter(d => d.id !== id);
+  await dbxSave();
+  renderDimensioni();
+  showToast('Dimensione eliminata');
 }
 
 async function saveOspiti() {
