@@ -760,7 +760,7 @@ function renderSintesi() {
     return;
   }
 
-  const s = generaSintesi(ospite, dati);
+  const s = generaSintesi(ospite, dati, currentWeek);
   container.innerHTML = `<div class="card">
     <div class="ospite-header">
       <div class="ospite-avatar">${initials(ospite)}</div>
@@ -772,88 +772,222 @@ function renderSintesi() {
   </div>`;
 }
 
-function generaSintesi(ospite, dati) {
+// --- Utility sintesi ---
+function prevWeek(weekKey) {
+  if (!weekKey) return null;
+  const [yrStr, wkStr] = weekKey.split('-W');
+  let wk = parseInt(wkStr), yr = parseInt(yrStr);
+  if (wk > 1) return `${yr}-W${String(wk - 1).padStart(2, '0')}`;
+  const dec28 = new Date(yr - 1, 11, 28);
+  const day = dec28.getDay() || 7;
+  dec28.setDate(dec28.getDate() + 4 - day);
+  const lastWk = Math.ceil(((dec28 - new Date(yr - 1, 0, 1)) / 86400000 + 1) / 7);
+  return `${yr - 1}-W${String(lastWk).padStart(2, '0')}`;
+}
+function strHash(s) {
+  let h = 0;
+  for (let i = 0; i < s.length; i++) h = (Math.imul(31, h) + s.charCodeAt(i)) | 0;
+  return Math.abs(h);
+}
+function pick(arr, n) { return arr[n % arr.length]; }
+
+function generaSintesi(ospite, dati, week) {
+  const weekKey = week || currentWeek;
+  const seed = strHash((ospite || '') + (weekKey || ''));
+
   const att = dati.attivita || [];
   const man = dati.mansioni || [];
-  const pc = dati.puliziaCamera;
+  const pc  = dati.puliziaCamera;
 
-  const attConVoto = att.filter(a => a.voto);
+  // --- Calcoli attività (AG non entra nel punteggio) ---
   const n1 = att.filter(a => a.voto === '1').length;
   const n2 = att.filter(a => a.voto === '2').length;
   const n3 = att.filter(a => a.voto === '3').length;
   const nA = att.filter(a => a.voto === 'A').length;
   const nAG = att.filter(a => a.voto === 'AG').length;
-  const tot = attConVoto.length;
+  const tot = att.filter(a => a.voto && a.voto !== 'AG').length;
+  const attRate = tot > 0 ? (n1*3 + n2*1.5 + n3*0.5) / (tot*3) : -1;
 
-  const manFatte = man.filter(m => m.voto === '+').length;
+  // --- Calcoli mansioni ---
+  const manFatte    = man.filter(m => m.voto === '+').length;
   const manNonFatte = man.filter(m => m.voto === '-').length;
-  const totMan = man.filter(m => m.voto).length;
+  const totMan      = man.filter(m => m.voto).length;
+  const manRate     = totMan > 0 ? manFatte / totMan : -1;
 
-  let livello = '';
-  if (tot === 0) livello = 'non disponibile';
-  else {
-    const pA = (n1 / tot) * 100;
-    const pAss = (nA / tot) * 100;
-    if (pA >= 70) livello = 'buona';
-    else if (pA >= 40) livello = 'discreta';
-    else if (pAss >= 50) livello = 'scarsa per frequenti assenze';
-    else livello = 'limitata';
+  // --- Settimana precedente ---
+  const prevW    = prevWeek(weekKey);
+  const prevDati = db.settimane[prevW]?.[ospite];
+  const hasPrev  = !!(prevDati?._compilato);
+
+  // Trend attività
+  let trendAtt = null;
+  if (hasPrev && attRate >= 0) {
+    const pA = prevDati.attivita || [];
+    const pTot = pA.filter(a => a.voto && a.voto !== 'AG').length;
+    if (pTot > 0) {
+      const pRate = (pA.filter(a=>a.voto==='1').length*3 + pA.filter(a=>a.voto==='2').length*1.5 + pA.filter(a=>a.voto==='3').length*0.5) / (pTot*3);
+      const d = attRate - pRate;
+      if (d >= 0.2) trendAtt = 'miglioramento'; else if (d <= -0.2) trendAtt = 'calo';
+    }
+  }
+  // Trend mansioni
+  let trendMan = null;
+  if (hasPrev && manRate >= 0) {
+    const pM = prevDati.mansioni || [];
+    const pTotM = pM.filter(m => m.voto).length;
+    if (pTotM > 0) {
+      const pManRate = pM.filter(m=>m.voto==='+').length / pTotM;
+      const d = manRate - pManRate;
+      if (d >= 0.25) trendMan = 'miglioramento'; else if (d <= -0.25) trendMan = 'calo';
+    }
   }
 
+  // --- Livello partecipazione ---
+  let livelloStr = null, livelloScore = -1;
+  if (attRate >= 0.75) {
+    livelloStr = pick(['buona','positiva','soddisfacente','costante'], seed);       livelloScore = 3;
+  } else if (attRate >= 0.5) {
+    livelloStr = pick(['discreta','parziale','alterna'], seed+1);                   livelloScore = 2;
+  } else if (attRate >= 0 && nA / Math.max(tot,1) >= 0.5) {
+    livelloStr = pick(['scarsa, con frequenti assenze','molto limitata per le assenze'], seed+2); livelloScore = 0;
+  } else if (attRate >= 0) {
+    livelloStr = pick(['limitata','discontinua','irregolare'], seed+3);             livelloScore = 1;
+  }
+
+  // --- Pattern per tipo di attività ---
+  const CATS = {
+    manuale:  ['ceramica','fotografia','laboratorio','panificazione','arteterapia','pittura','disegno','bricolage'],
+    sociale:  ['gruppo','teatro','drammatizzazione','agorà','musicoterapia','assemblea'],
+    corpo:    ['risveglio','muscolare','sport','movimento','yoga','ginnastica'],
+    info:     ['notizie','giornale','lettura','dentro','fuori'],
+  };
+  const CATS_LBL = { manuale:'manuali', sociale:'di gruppo', corpo:'motorie', info:'informative' };
+  function classAtt(nome) {
+    const n = nome.toLowerCase();
+    for (const [cat, keys] of Object.entries(CATS)) if (keys.some(k => n.includes(k))) return cat;
+    return null;
+  }
+  const bycat = {};
+  att.forEach(a => {
+    if (!a.voto || a.voto === 'AG') return;
+    const cat = classAtt(a.nome); if (!cat) return;
+    if (!bycat[cat]) bycat[cat] = { n1:0, nA:0, tot:0 };
+    bycat[cat].tot++;
+    if (a.voto === '1') bycat[cat].n1++;
+    if (a.voto === 'A') bycat[cat].nA++;
+  });
+  let patternNote = null;
+  const catsArr = Object.entries(bycat).filter(([,v]) => v.tot >= 2)
+    .map(([cat,v]) => ({ cat, score: v.n1/v.tot }))
+    .sort((a,b) => b.score - a.score);
+  if (catsArr.length >= 2) {
+    const best = catsArr[0], worst = catsArr[catsArr.length-1];
+    if (best.score - worst.score >= 0.35) {
+      patternNote = `Maggiore coinvolgimento nelle attività ${CATS_LBL[best.cat]}`;
+      if (worst.score <= 0.3) patternNote += `, con più difficoltà in quelle ${CATS_LBL[worst.cat]}`;
+    }
+  }
+
+  // --- Osservazione incrociata attività / mansioni ---
+  const highAtt = livelloScore >= 2, lowAtt = livelloScore >= 0 && livelloScore <= 1;
+  const highMan = manRate >= 0.75,   lowMan = manRate >= 0 && manRate < 0.4;
+  let crossNote = null;
+  if      (highAtt && highMan) crossNote = pick(['Settimana complessivamente positiva e coerente in tutte le aree','Buona regolarità riscontrata sia nelle attività che nella gestione domestica'], seed+10);
+  else if (highAtt && lowMan)  crossNote = pick(['Buona partecipazione terapeutica a fronte di difficoltà nella gestione domestica','Si segnala una discrepanza tra il buon coinvolgimento nelle attività e le mansioni incomplete'], seed+11);
+  else if (lowAtt  && highMan) crossNote = pick(['Nonostante le difficoltà nelle attività, ha mantenuto regolarità nelle mansioni domestiche','Settimana difficile nelle attività ma con buona tenuta sul piano domestico'], seed+12);
+  else if (livelloScore === 0 && lowMan) crossNote = pick(['Settimana particolarmente difficile in tutte le aree','Si segnalano difficoltà diffuse sia nelle attività che nella gestione domestica'], seed+13);
+
+  // === TESTO ===
   const parti = [];
 
-  if (tot > 0) {
-    let t = `La partecipazione alle attività è risultata <strong>${livello}</strong>`;
-    if (n1 > 0) t += `, con ${n1} ${n1===1?'attività':'attività'} svolt${n1===1?'a':'e'} attivamente`;
-    if (n2 > 0) t += `, ${n2} con richiami`;
-    if (n3 > 0) t += `, ${n3} passiv${n3===1?'a':'e'}`;
-    if (nA > 0) t += `, ${nA} assenz${nA===1?'a':'e'}`;
+  // 1. Partecipazione + trend
+  if (livelloStr && tot > 0) {
+    let t = `La partecipazione alle attività è risultata <strong>${livelloStr}</strong>`;
+    if (n1 > 0)  t += `, con ${n1} attività svolt${n1===1?'a':'e'} attivamente`;
+    if (n2 > 0)  t += `, ${n2} con richiami`;
+    if (n3 > 0)  t += `, ${n3} passiv${n3===1?'a':'e'}`;
+    if (nA > 0)  t += `, ${nA} assenz${nA===1?'a':'e'}`;
     if (nAG > 0) t += ` (${nAG} giustificat${nAG===1?'a':'e'})`;
+    if (trendAtt === 'miglioramento') t += ` — <strong>in miglioramento</strong> rispetto alla settimana precedente`;
+    else if (trendAtt === 'calo')     t += ` — in calo rispetto alla settimana precedente`;
     parti.push(t + '.');
   }
 
-  const attive = att.filter(a => a.voto==='1').map(a=>a.nome);
-  const assenze = att.filter(a => a.voto==='A').map(a=>a.nome);
-  if (attive.length > 0 && attive.length <= 4) parti.push(`Ha partecipato attivamente a: ${attive.join(', ')}.`);
-  if (assenze.length > 0 && assenze.length <= 4) parti.push(`Assente in: ${assenze.join(', ')}.`);
+  // 2. Attività specifiche
+  const attive  = att.filter(a => a.voto==='1').map(a => a.nome);
+  const assenze = att.filter(a => a.voto==='A').map(a => a.nome);
+  if (attive.length  > 0 && attive.length  <= 5) parti.push(`${pick(['Ha partecipato attivamente a','Buona presenza in','Coinvolgimento diretto in'], seed+20)}: ${attive.join(', ')}.`);
+  if (assenze.length > 0 && assenze.length <= 5) parti.push(`${pick(['Assente in','Non presente in','Assenza registrata in'], seed+21)}: ${assenze.join(', ')}.`);
 
+  // 3. Pattern categoria
+  if (patternNote) parti.push(patternNote + '.');
+
+  // 4. Mansioni + trend
   if (totMan > 0) {
     let t = '';
-    if (manNonFatte === 0) t = `Le mansioni domestiche sono state <strong>svolte regolarmente</strong>`;
-    else if (manFatte === 0) t = `Le mansioni domestiche <strong>non sono state svolte</strong>`;
-    else {
-      const perc = Math.round((manFatte/totMan)*100);
+    if (manNonFatte === 0) {
+      t = `Le mansioni domestiche ${pick(['sono state svolte regolarmente','sono state completate','risultano tutte completate'], seed+30)}`;
+    } else if (manFatte === 0) {
+      t = `Le mansioni domestiche <strong>non sono state svolte</strong>`;
+    } else {
+      const perc = Math.round(manRate*100);
       const nonFatte = man.filter(m=>m.voto==='-').map(m=>m.nome);
       t = `Nelle mansioni ha raggiunto il ${perc}% di completamento`;
       if (nonFatte.length <= 3) t += ` (non svolte: ${nonFatte.join(', ')})`;
     }
+    if (trendMan === 'miglioramento') t += `, <strong>in miglioramento</strong> rispetto alla settimana scorsa`;
+    else if (trendMan === 'calo')     t += `, in calo rispetto alla settimana scorsa`;
     parti.push(t + '.');
   }
 
-  if (pc === '+') parti.push(`La pulizia della camera è stata effettuata.`);
+  // 5. Camera
+  if (pc === '+') parti.push(`La pulizia della camera ${pick(['è stata effettuata','risulta eseguita','è regolare'], seed+40)}.`);
   else if (pc === '-') parti.push(`<strong>La pulizia della camera non è stata effettuata.</strong>`);
 
+  // 6. Dimensioni custom
   const dims = dati.dimensioni || {};
   (db.dimensioni || []).forEach(d => {
-    const v = dims[d.id];
-    if (v) {
-      if (d.tipo === 'testo') parti.push(`${d.nome}: ${v}.`);
-      else parti.push(`${d.nome}: <strong>${v}</strong>.`);
-    }
+    const v = dims[d.id]; if (!v) return;
+    parti.push(d.tipo === 'testo' ? `${d.nome}: ${v}.` : `${d.nome}: <strong>${v}</strong>.`);
   });
 
+  // 7. Osservazione conclusiva
+  if (crossNote) parti.push(crossNote + '.');
+
+  // === BADGE ===
   const badges = [];
   if (tot > 0) {
-    if (n1 >= Math.ceil(tot * 0.6)) badges.push({tipo:'green', label:'Partecipazione attiva'});
-    else if (nA >= Math.ceil(tot * 0.5)) badges.push({tipo:'red', label:'Molte assenze'});
-    else if (n2 > n1) badges.push({tipo:'orange', label:'Necessita richiami'});
+    if      (livelloScore === 3) badges.push({tipo:'green',  label:'Partecipazione attiva'});
+    else if (livelloScore === 2) badges.push({tipo:'green',  label:'Partecipazione discreta'});
+    else if (livelloScore === 0) badges.push({tipo:'red',    label:'Molte assenze'});
+    else                         badges.push({tipo:'orange', label:'Partecipazione limitata'});
   }
+  if (trendAtt === 'miglioramento') badges.push({tipo:'green', label:'↑ In miglioramento'});
+  else if (trendAtt === 'calo')     badges.push({tipo:'red',   label:'↓ In calo'});
+
   if (totMan > 0) {
-    if (manNonFatte === 0) badges.push({tipo:'green', label:'Mansioni regolari'});
-    else if (manNonFatte > manFatte) badges.push({tipo:'red', label:'Mansioni incomplete'});
+    if      (manNonFatte === 0) badges.push({tipo:'green',  label:'Mansioni complete'});
+    else if (manRate < 0.5)     badges.push({tipo:'red',    label:'Mansioni incomplete'});
+    else                        badges.push({tipo:'orange', label:'Mansioni parziali'});
   }
-  if (pc === '-') badges.push({tipo:'orange', label:'Camera non pulita'});
-  else if (pc === '+') badges.push({tipo:'green', label:'Camera ok'});
+  if (trendMan === 'miglioramento') badges.push({tipo:'green', label:'↑ Mansioni migliorano'});
+
+  if (pc === '+') badges.push({tipo:'green',  label:'Camera ok'});
+  else if (pc === '-') badges.push({tipo:'orange', label:'Camera non pulita'});
+
+  (db.dimensioni || []).forEach(d => {
+    const v = dims[d.id]; if (!v || d.tipo === 'testo') return;
+    if (d.tipo === 'sinono') {
+      badges.push({tipo: v==='Sì'?'green':'red', label:`${d.nome}: ${v}`});
+    } else {
+      const scala = (d.scala||'').split(',').map(s=>s.trim()).filter(Boolean);
+      const idx = scala.indexOf(v);
+      if (idx >= 0 && scala.length > 1) {
+        const pos = idx / (scala.length - 1);
+        badges.push({tipo: pos>=0.6?'green':pos<=0.3?'red':'orange', label:`${d.nome}: ${v}`});
+      }
+    }
+  });
 
   return {
     testo: parti.length ? parti.join(' ') : 'Nessun dato registrato questa settimana.',
@@ -880,7 +1014,7 @@ function renderStorico() {
     if (ospite) {
       const dati = week[ospite];
       if (!dati?._compilato) return;
-      const s = generaSintesi(ospite, dati);
+      const s = generaSintesi(ospite, dati, w);
       html += `<div class="storico-item">
         <h4>${weekLabel(w)}</h4>
         <div class="sintesi" style="margin-top:8px;">${s.testo}</div>
@@ -906,7 +1040,7 @@ function toggleStorico(w, el) {
   let html = '';
   db.ospiti.forEach(o => {
     if (!week[o]?._compilato) return;
-    const s = generaSintesi(o, week[o]);
+    const s = generaSintesi(o, week[o], w);
     html += `<div style="margin-bottom:10px;padding-bottom:10px;border-bottom:1px solid #eee;">
       <strong>${o}</strong>
       <div style="font-size:13px;color:#444;margin-top:4px;">${s.testo.replace(/<[^>]+>/g,'')}</div>
