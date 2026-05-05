@@ -141,12 +141,19 @@ hr { border: none; border-top: 1px solid #eee; margin: 16px 0; }
 .preset-btn { padding: 4px 10px; border: 1px solid #cde8df; border-radius: 12px; font-size: 12px; cursor: pointer; background: #f0f7f4; color: #0a5c47; font-family: Arial; }
 .preset-btn:hover { background: #d8ede6; }
 
-/* Numbered editor */
-.numbered-editor { display: flex; border: 1px solid #ddd; border-radius: 8px; overflow: hidden; background: white; }
-.numbered-editor:focus-within { outline: 2px solid #0a5c47; border-color: #0a5c47; }
-.line-nums { background: #f0f7f4; color: #0a5c47; padding: 9px 8px 9px 10px; text-align: right; user-select: none; font-size: 13px; font-family: Arial; line-height: 1.65em; border-right: 1px solid #d0e8df; min-width: 34px; }
-.line-nums span { display: block; font-weight: bold; }
-.numbered-editor textarea { flex: 1; border: none; border-radius: 0; padding: 9px 12px; resize: none; font-size: 14px; font-family: Arial; line-height: 1.65em; outline: none; background: transparent; color: #222; width: 100%; }
+/* Row editor (griglia numerata) */
+.row-editor { border: 1px solid #ddd; border-radius: 8px; overflow: hidden; background: white; }
+.row-editor:focus-within { border-color: #0a5c47; box-shadow: 0 0 0 2px rgba(10,92,71,0.15); }
+.editor-row { display: flex; align-items: center; border-bottom: 1px solid #f0ece8; }
+.editor-row:last-child { border-bottom: none; }
+.editor-row:hover { background: #fafdf9; }
+.editor-row:focus-within { background: #f4faf7; }
+.row-num { background: #f0f7f4; color: #0a5c47; font-weight: bold; font-size: 12px; min-width: 38px; text-align: right; padding: 0 10px; align-self: stretch; display: flex; align-items: center; justify-content: flex-end; border-right: 1px solid #d0e8df; user-select: none; flex-shrink: 0; }
+.row-input { flex: 1; border: none; padding: 10px 12px; font-size: 14px; font-family: Arial; color: #222; outline: none; background: transparent; }
+.row-del { background: none; border: none; color: #ccc; font-size: 18px; line-height: 1; padding: 0 12px; cursor: pointer; flex-shrink: 0; }
+.row-del:hover { color: #c62828; }
+.add-row-btn { display: flex; align-items: center; gap: 6px; width: 100%; padding: 9px 14px; border: none; border-top: 1px dashed #ddd; background: #fafafa; color: #0a5c47; font-size: 13px; font-family: Arial; cursor: pointer; border-radius: 0 0 8px 8px; }
+.add-row-btn:hover { background: #f0f7f4; }
 
 @media (max-width: 400px) {
   .stats { grid-template-columns: 1fr 1fr; }
@@ -247,30 +254,24 @@ hr { border: none; border-top: 1px solid #eee; margin: 16px 0; }
     <div id="tab-impostazioni" class="section">
       <div class="card">
         <div class="sec-title">Lista ospiti</div>
-        <p style="font-size:13px;color:#666;margin-bottom:10px;">Un nome per riga.</p>
-        <div class="numbered-editor">
-          <div class="line-nums" id="ospiteListEdit-lines"></div>
-          <textarea id="ospiteListEdit" rows="18" oninput="updateLineNums('ospiteListEdit')"></textarea>
+        <div class="row-editor" id="ospiteRows">
+          <button class="add-row-btn" onclick="addRow('ospiteRows')">＋ Aggiungi ospite</button>
         </div>
-        <button class="btn btn-primary" onclick="saveOspiti()">Salva lista ospiti</button>
+        <button class="btn btn-primary" style="margin-top:10px;" onclick="saveOspiti()">Salva lista ospiti</button>
       </div>
       <div class="card">
         <div class="sec-title">Attività laboratorio</div>
-        <p style="font-size:13px;color:#666;margin-bottom:10px;">Una per riga.</p>
-        <div class="numbered-editor">
-          <div class="line-nums" id="attivitaEdit-lines"></div>
-          <textarea id="attivitaEdit" rows="10" oninput="updateLineNums('attivitaEdit')"></textarea>
+        <div class="row-editor" id="attivitaRows">
+          <button class="add-row-btn" onclick="addRow('attivitaRows')">＋ Aggiungi attività</button>
         </div>
-        <button class="btn btn-primary" onclick="saveAttivita()">Salva attività</button>
+        <button class="btn btn-primary" style="margin-top:10px;" onclick="saveAttivita()">Salva attività</button>
       </div>
       <div class="card">
         <div class="sec-title">Mansioni domestiche</div>
-        <p style="font-size:13px;color:#666;margin-bottom:10px;">Una per riga.</p>
-        <div class="numbered-editor">
-          <div class="line-nums" id="mansioniEdit-lines"></div>
-          <textarea id="mansioniEdit" rows="8" oninput="updateLineNums('mansioniEdit')"></textarea>
+        <div class="row-editor" id="mansioniRows">
+          <button class="add-row-btn" onclick="addRow('mansioniRows')">＋ Aggiungi mansione</button>
         </div>
-        <button class="btn btn-primary" onclick="saveMansioni()">Salva mansioni</button>
+        <button class="btn btn-primary" style="margin-top:10px;" onclick="saveMansioni()">Salva mansioni</button>
       </div>
       <div class="card">
         <div class="sec-title">Dimensioni di valutazione</div>
@@ -919,23 +920,57 @@ function toggleStorico(w, el) {
 // ============================================================
 // IMPOSTAZIONI
 // ============================================================
-function updateLineNums(id) {
-  const ta = document.getElementById(id);
-  const lns = document.getElementById(id + '-lines');
-  if (!lns) return;
-  const count = ta.value === '' ? 1 : ta.value.split('\n').length;
-  lns.innerHTML = Array.from({length: count}, (_, i) => `<span>${i + 1}</span>`).join('');
+// ============================================================
+// ROW EDITOR
+// ============================================================
+function initRowEditor(containerId, items, placeholder) {
+  const container = document.getElementById(containerId);
+  // Tieni il pulsante "aggiungi" (ultimo figlio)
+  const addBtn = container.querySelector('.add-row-btn');
+  container.innerHTML = '';
+  items.forEach((item, i) => _appendRow(container, item, i + 1, placeholder));
+  container.appendChild(addBtn);
+}
+
+function _appendRow(container, value, num, placeholder) {
+  const addBtn = container.querySelector('.add-row-btn');
+  const row = document.createElement('div');
+  row.className = 'editor-row';
+  row.innerHTML = `
+    <span class="row-num">${num}</span>
+    <input type="text" class="row-input" value="${value.replace(/"/g,'&quot;')}" placeholder="${placeholder||''}">
+    <button class="row-del" onclick="removeRow(this)" title="Elimina">×</button>`;
+  container.insertBefore(row, addBtn);
+}
+
+function addRow(containerId) {
+  const container = document.getElementById(containerId);
+  const num = container.querySelectorAll('.editor-row').length + 1;
+  const ph = containerId === 'ospiteRows' ? 'Cognome...' :
+             containerId === 'attivitaRows' ? 'Nome attività...' : 'Nome mansione...';
+  _appendRow(container, '', num, ph);
+  container.querySelectorAll('.row-input')[num - 1].focus();
+}
+
+function removeRow(btn) {
+  const container = btn.closest('.row-editor');
+  btn.closest('.editor-row').remove();
+  container.querySelectorAll('.editor-row').forEach((r, i) => {
+    r.querySelector('.row-num').textContent = i + 1;
+  });
+}
+
+function getRowValues(containerId) {
+  return Array.from(document.querySelectorAll(`#${containerId} .row-input`))
+    .map(inp => inp.value.trim()).filter(Boolean);
 }
 
 function renderImpostazioni() {
-  document.getElementById('ospiteListEdit').value = db.ospiti.join('\n');
-  document.getElementById('attivitaEdit').value = db.attivita.join('\n');
-  document.getElementById('mansioniEdit').value = db.mansioni.join('\n');
+  initRowEditor('ospiteRows',   db.ospiti,   'Cognome...');
+  initRowEditor('attivitaRows', db.attivita, 'Nome attività...');
+  initRowEditor('mansioniRows', db.mansioni, 'Nome mansione...');
   document.getElementById('accountInfo').textContent =
     `Connesso a Dropbox. I dati sono salvati su il_nodo_data.json nel tuo account.`;
-  updateLineNums('ospiteListEdit');
-  updateLineNums('attivitaEdit');
-  updateLineNums('mansioniEdit');
   renderDimensioni();
 }
 
@@ -1036,17 +1071,17 @@ async function deleteDim(id) {
 }
 
 async function saveOspiti() {
-  const lista = document.getElementById('ospiteListEdit').value.split('\n').map(s=>s.trim()).filter(Boolean);
+  const lista = getRowValues('ospiteRows');
   if (!lista.length) { alert('Inserisci almeno un ospite'); return; }
   db.ospiti = lista;
   await dbxSave(); populateSelects(); renderHome(); showToast('Lista ospiti salvata ✓');
 }
 async function saveAttivita() {
-  db.attivita = document.getElementById('attivitaEdit').value.split('\n').map(s=>s.trim()).filter(Boolean);
+  db.attivita = getRowValues('attivitaRows');
   await dbxSave(); showToast('Attività salvate ✓');
 }
 async function saveMansioni() {
-  db.mansioni = document.getElementById('mansioniEdit').value.split('\n').map(s=>s.trim()).filter(Boolean);
+  db.mansioni = getRowValues('mansioniRows');
   await dbxSave(); showToast('Mansioni salvate ✓');
 }
 
