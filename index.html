@@ -62,7 +62,9 @@ select:focus, input:focus, textarea:focus { outline: 2px solid #0a5c47; border-c
 /* Chips */
 .chips { display: flex; flex-wrap: wrap; gap: 8px; }
 .chip { padding: 7px 14px; border-radius: 20px; border: 1.5px solid #ddd; font-size: 13px; cursor: pointer; background: white; color: #444; }
-.chip.done { background: #e8f5e9; border-color: #2e7d32; color: #2e7d32; }
+.chip.done    { background: #e8f5e9; border-color: #2e7d32; color: #2e7d32; }
+.chip.partial { background: #fff8e1; border-color: #f57f17; color: #e65100; }
+.day-badge { display: inline-block; background: rgba(0,0,0,0.12); border-radius: 8px; padding: 0 5px; font-size: 11px; font-weight: bold; margin-left: 3px; vertical-align: middle; }
 
 /* Sintesi */
 .sintesi { background: #f0f7f4; border-left: 4px solid #0a5c47; padding: 12px 14px; border-radius: 0 8px 8px 0; font-size: 14px; line-height: 1.6; color: #222; margin-top: 10px; }
@@ -211,7 +213,7 @@ hr { border: none; border-top: 1px solid #eee; margin: 16px 0; }
       </div>
       <div class="card">
         <div class="sec-title">Ospiti questa settimana</div>
-        <div class="legend">Verde = compilato · Grigio = da compilare</div>
+        <div class="legend">Verde = compilato oggi · Arancio = alcuni giorni · Grigio = nessun dato · <strong>(n)</strong> = giorni compilati</div>
         <div class="chips" id="homeChips"></div>
       </div>
       <button class="btn btn-secondary btn-sm" style="margin-top:4px;" onclick="syncData()">&#8635; Aggiorna dati</button>
@@ -219,6 +221,10 @@ hr { border: none; border-top: 1px solid #eee; margin: 16px 0; }
 
     <!-- INSERISCI -->
     <div id="tab-inserisci" class="section">
+      <div class="week-bar">
+        <input type="date" id="datePicker" onchange="changeDate(this.value)">
+        <span id="dateDayLabel" style="font-size:13px;color:#0a5c47;font-weight:bold;white-space:nowrap;"></span>
+      </div>
       <div class="card">
         <label>Ospite</label>
         <select id="selOspite" onchange="renderFormOspite()">
@@ -323,14 +329,42 @@ const DBX_PATH = "/il_nodo_data.json";
 // ============================================================
 // STATO
 // ============================================================
-let db = { ospiti: [], attivita: [], mansioni: [], dimensioni: [], settimane: {} };
+let db = { ospiti: [], attivita: [], mansioni: [], dimensioni: [], settimane: {}, giorni: {} };
 let currentWeek = getTodayWeek();
-let accessToken = null;
+let currentDate  = getTodayDate();
+let accessToken  = null;
 let currentFormState = {};
 
 // ============================================================
 // UTILS
 // ============================================================
+function getTodayDate() {
+  const n = new Date();
+  return `${n.getFullYear()}-${String(n.getMonth()+1).padStart(2,'0')}-${String(n.getDate()).padStart(2,'0')}`;
+}
+function dateToWeek(dateStr) {
+  const d = new Date(dateStr);
+  const day = d.getDay() || 7;
+  d.setDate(d.getDate() + 4 - day);
+  const y = d.getFullYear();
+  const wk = Math.ceil(((d - new Date(y,0,1)) / 86400000 + 1) / 7);
+  return `${y}-W${String(wk).padStart(2,'0')}`;
+}
+function getWeekDates(weekKey) {
+  const [yr, wkn] = weekKey.split('-W');
+  const jan1 = new Date(parseInt(yr), 0, 1);
+  const start = new Date(jan1.getTime() + (parseInt(wkn)-1)*7*86400000);
+  const dow = start.getDay() || 7;
+  const mon = new Date(start); mon.setDate(start.getDate() - dow + 1);
+  return Array.from({length:7}, (_,i) => {
+    const d = new Date(mon); d.setDate(mon.getDate()+i);
+    return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+  });
+}
+function formatDateShort(d) {
+  const dt = new Date(d + 'T12:00:00');
+  return ['Dom','Lun','Mar','Mer','Gio','Ven','Sab'][dt.getDay()] + ' ' + dt.getDate() + '/' + (dt.getMonth()+1);
+}
 function getTodayWeek() {
   const now = new Date();
   const d = new Date(Date.UTC(now.getFullYear(), now.getMonth(), now.getDate()));
@@ -433,6 +467,7 @@ async function dbxLoad() {
     if (!db.mansioni?.length) db.mansioni = [...DEFAULT_MANSIONI];
     if (!db.dimensioni) db.dimensioni = [];
     if (!db.settimane) db.settimane = {};
+    if (!db.giorni) db.giorni = {};
   } catch(e) {
     console.warn('dbxLoad:', e);
   }
@@ -475,6 +510,7 @@ async function init(token) {
   db.mansioni = [...DEFAULT_MANSIONI];
   db.dimensioni = [];
   db.settimane = {};
+  db.giorni = {};
 
   document.getElementById('loginScreen').style.display = 'none';
   document.getElementById('mainApp').style.display = 'block';
@@ -487,11 +523,36 @@ async function init(token) {
 }
 
 function renderAll() {
+  currentDate = getTodayDate();
+  currentWeek = getTodayWeek();
   document.getElementById('weekPicker').value = currentWeek;
   document.getElementById('headerWeek').textContent = weekLabel(currentWeek);
+  const dp = document.getElementById('datePicker');
+  if (dp) { dp.value = currentDate; updateDateLabel(); }
   populateSelects();
   renderHome();
   renderImpostazioni();
+}
+function updateDateLabel() {
+  const el = document.getElementById('dateDayLabel');
+  if (!el) return;
+  const oggi = getTodayDate();
+  if (currentDate === oggi) el.textContent = 'Oggi';
+  else if (currentDate === prevDay(oggi)) el.textContent = 'Ieri';
+  else el.textContent = formatDateShort(currentDate);
+}
+function prevDay(d) {
+  const dt = new Date(d + 'T12:00:00'); dt.setDate(dt.getDate()-1);
+  return `${dt.getFullYear()}-${String(dt.getMonth()+1).padStart(2,'0')}-${String(dt.getDate()).padStart(2,'0')}`;
+}
+function changeDate(d) {
+  currentDate = d;
+  currentWeek = dateToWeek(d);
+  currentFormState = {};
+  document.getElementById('weekPicker').value = currentWeek;
+  document.getElementById('headerWeek').textContent = weekLabel(currentWeek);
+  updateDateLabel();
+  if (document.getElementById('selOspite').value) renderFormOspite();
 }
 
 function populateSelects() {
@@ -529,31 +590,40 @@ function changeWeek(w) {
 // PANORAMICA
 // ============================================================
 function renderHome() {
-  const week = db.settimane[currentWeek] || {};
   const totale = db.ospiti.length;
-  const compilati = db.ospiti.filter(o => week[o]?._compilato).length;
+  const weekDates = getWeekDates(currentWeek);
+  const oggi = getTodayDate();
 
+  // Conta ospiti compilati oggi
+  const compilatiOggi = db.ospiti.filter(o => db.giorni[oggi]?.[o]?._compilato).length;
+
+  // Media attività settimanale (aggregata)
   let somma = 0, count = 0;
   db.ospiti.forEach(o => {
-    (week[o]?.attivita || []).forEach(a => {
+    const agg = aggregateDayData(o, currentWeek);
+    (agg?.attivita || []).forEach(a => {
       const v = parseInt(a.voto);
       if (v >= 1 && v <= 3) { somma += v; count++; }
     });
   });
   const media = count > 0 ? (somma/count).toFixed(1) : '–';
 
-  document.getElementById('statCompilati').textContent = compilati;
+  document.getElementById('statCompilati').textContent = compilatiOggi;
   document.getElementById('statTotale').textContent = totale;
   document.getElementById('statMedia').textContent = media;
 
   const chips = document.getElementById('homeChips');
   chips.innerHTML = '';
   db.ospiti.forEach(o => {
-    const done = week[o]?._compilato;
+    const daysThisWeek = weekDates.filter(d => db.giorni[d]?.[o]?._compilato).length;
+    const compilatoOggi = !!(db.giorni[oggi]?.[o]?._compilato);
     const chip = document.createElement('div');
-    chip.className = 'chip' + (done ? ' done' : '');
-    chip.textContent = o;
+    chip.className = 'chip' + (compilatoOggi ? ' done' : daysThisWeek > 0 ? ' partial' : '');
+    chip.innerHTML = o + (daysThisWeek > 0 ? ` <span class="day-badge">${daysThisWeek}</span>` : '');
     chip.onclick = () => {
+      currentDate = oggi;
+      document.getElementById('datePicker').value = oggi;
+      updateDateLabel();
       document.getElementById('selOspite').value = o;
       document.querySelectorAll('.nav button')[1].click();
       renderFormOspite();
@@ -570,7 +640,7 @@ function renderFormOspite() {
   const container = document.getElementById('formOspite');
   if (!ospite) { container.innerHTML = ''; return; }
 
-  const saved = db.settimane[currentWeek]?.[ospite] || {};
+  const saved = db.giorni[currentDate]?.[ospite] || {};
   // Inizializza lo stato del form dai dati salvati
   if (!currentFormState[ospite]) {
     currentFormState[ospite] = { attivita: {}, mansioni: {}, puliziaCamera: '', dimensioni: {} };
@@ -593,7 +663,7 @@ function renderFormOspite() {
 
   let html = `<div class="ospite-header" style="padding:0 0 4px;">
     <div class="ospite-avatar">${initials(ospite)}</div>
-    <div><h2 style="font-size:17px;">${ospite}</h2><p style="font-size:12px;color:#888;">${weekLabel(currentWeek)}</p></div>
+    <div><h2 style="font-size:17px;">${ospite}</h2><p style="font-size:12px;color:#888;">${formatDateShort(currentDate)}</p></div>
   </div>`;
 
   // ATTIVITÀ
@@ -716,7 +786,7 @@ function setDimScore(dimId, idx, valore) {
 async function saveOspiteData() {
   const ospite = document.getElementById('selOspite').value;
   if (!ospite) return;
-  if (!db.settimane[currentWeek]) db.settimane[currentWeek] = {};
+  if (!db.giorni[currentDate]) db.giorni[currentDate] = {};
 
   const state = currentFormState[ospite] || {};
   const attivita = db.attivita.map(att => ({ nome: att, voto: state.attivita?.[att] || '' }));
@@ -733,7 +803,7 @@ async function saveOspiteData() {
     }
   });
 
-  db.settimane[currentWeek][ospite] = {
+  db.giorni[currentDate][ospite] = {
     attivita, mansioni, dimensioni, note,
     puliziaCamera: state.puliziaCamera || '',
     _compilato: true,
@@ -754,22 +824,91 @@ function renderSintesi() {
   const container = document.getElementById('sintesiContent');
   if (!ospite) { container.innerHTML = ''; return; }
 
-  const dati = db.settimane[currentWeek]?.[ospite];
+  const dati = aggregateDayData(ospite, currentWeek)
+            || (db.settimane[currentWeek]?.[ospite]?._compilato ? db.settimane[currentWeek][ospite] : null);
   if (!dati?._compilato) {
-    container.innerHTML = `<div class="card"><div class="empty">Nessuna scheda per questa settimana.<br>Compilala nella sezione "Inserisci".</div></div>`;
+    container.innerHTML = `<div class="card"><div class="empty">Nessuna scheda per questa settimana.<br>Vai in "Inserisci" e compila almeno un giorno.</div></div>`;
     return;
   }
 
   const s = generaSintesi(ospite, dati, currentWeek);
+  const giorni = dati._giorni ? `· ${dati._giorni} ${dati._giorni===1?'giorno':'giorni'} rilevati` : '';
+  const daysInfo = (dati._dates||[]).map(formatDateShort).join(', ');
   container.innerHTML = `<div class="card">
     <div class="ospite-header">
       <div class="ospite-avatar">${initials(ospite)}</div>
-      <div><h2 style="font-size:17px;">${ospite}</h2><p style="font-size:12px;color:#888;">${weekLabel(currentWeek)}</p></div>
+      <div><h2 style="font-size:17px;">${ospite}</h2><p style="font-size:12px;color:#888;">${weekLabel(currentWeek)} ${giorni}</p></div>
     </div>
+    ${daysInfo ? `<div style="font-size:11px;color:#aaa;margin-bottom:10px;">Giorni: ${daysInfo}</div>` : ''}
     <div class="sintesi">${s.testo}</div>
     <div style="margin-top:12px;">${s.badges.map(b=>`<span class="badge badge-${b.tipo}">${b.label}</span>`).join('')}</div>
-    ${dati.note ? `<hr><div style="font-size:13px;color:#555;"><strong>Note operatore:</strong> ${dati.note}</div>` : ''}
+    ${dati.note ? `<hr><div style="font-size:13px;color:#555;"><strong>Note:</strong> ${dati.note}</div>` : ''}
   </div>`;
+}
+
+// ============================================================
+// AGGREGAZIONE GIORNALIERA → SETTIMANALE
+// ============================================================
+function aggregateDayData(ospite, weekKey) {
+  const dates = getWeekDates(weekKey);
+  const days = dates
+    .map(d => ({ date: d, data: db.giorni[d]?.[ospite] }))
+    .filter(d => d.data?._compilato);
+  if (!days.length) return null;
+
+  // Attività: voto prevalente per ogni attività
+  const attMap = {};
+  (db.attivita || []).forEach(n => { attMap[n] = {}; });
+  days.forEach(({ data }) => {
+    (data.attivita || []).forEach(a => {
+      if (!a.voto) return;
+      if (!attMap[a.nome]) attMap[a.nome] = {};
+      attMap[a.nome][a.voto] = (attMap[a.nome][a.voto] || 0) + 1;
+    });
+  });
+  const VPRI = { '1':4, '2':3, '3':2, 'A':1, 'AG':0 };
+  const attivita = Object.entries(attMap).map(([nome, counts]) => {
+    const entries = Object.entries(counts);
+    if (!entries.length) return { nome, voto: '' };
+    entries.sort((a,b) => b[1]-a[1] || (VPRI[b[0]]||0)-(VPRI[a[0]]||0));
+    return { nome, voto: entries[0][0] };
+  });
+
+  // Mansioni: svolto se >= 60% dei giorni con dato
+  const manMap = {};
+  (db.mansioni || []).forEach(n => { manMap[n] = { pos:0, tot:0 }; });
+  days.forEach(({ data }) => {
+    (data.mansioni || []).forEach(m => {
+      if (!m.voto) return;
+      if (!manMap[m.nome]) manMap[m.nome] = { pos:0, tot:0 };
+      manMap[m.nome].tot++;
+      if (m.voto === '+') manMap[m.nome].pos++;
+    });
+  });
+  const mansioni = Object.entries(manMap).map(([nome, s]) => ({
+    nome,
+    voto: s.tot > 0 ? (s.pos / s.tot >= 0.6 ? '+' : '-') : '',
+    _pos: s.pos, _tot: s.tot
+  }));
+
+  // Camera: prevalenza
+  const camPos = days.filter(d => d.data.puliziaCamera === '+').length;
+  const camTot = days.filter(d => d.data.puliziaCamera).length;
+  const puliziaCamera = camTot > 0 ? (camPos / camTot >= 0.6 ? '+' : '-') : '';
+
+  // Dimensioni: ultimo valore non vuoto
+  const dimensioni = {};
+  days.forEach(({ data }) => {
+    Object.entries(data.dimensioni || {}).forEach(([id, v]) => { if (v) dimensioni[id] = v; });
+  });
+
+  // Note: concatena per giorno
+  const note = days.filter(d => d.data.note)
+    .map(d => `[${formatDateShort(d.date)}] ${d.data.note}`).join(' · ');
+
+  return { attivita, mansioni, dimensioni, puliziaCamera, note,
+           _compilato: true, _giorni: days.length,
+           _dates: days.map(d => d.date) };
 }
 
 // --- Utility sintesi ---
@@ -1001,7 +1140,12 @@ function generaSintesi(ospite, dati, week) {
 function renderStorico() {
   const ospite = document.getElementById('selStoricoOspite').value;
   const container = document.getElementById('storicoContent');
-  const settimane = Object.keys(db.settimane).sort().reverse();
+
+  // Unione settimane da giorni (nuovi) + settimane legacy
+  const weeksSet = new Set();
+  Object.keys(db.giorni || {}).forEach(d => weeksSet.add(dateToWeek(d)));
+  Object.keys(db.settimane || {}).forEach(w => weeksSet.add(w));
+  const settimane = Array.from(weeksSet).sort().reverse();
 
   if (!settimane.length) {
     container.innerHTML = `<div class="empty">Nessun dato storico ancora disponibile.</div>`;
@@ -1010,22 +1154,26 @@ function renderStorico() {
 
   let html = '';
   settimane.forEach(w => {
-    const week = db.settimane[w] || {};
     if (ospite) {
-      const dati = week[ospite];
+      const dati = aggregateDayData(ospite, w)
+                || (db.settimane[w]?.[ospite]?._compilato ? db.settimane[w][ospite] : null);
       if (!dati?._compilato) return;
       const s = generaSintesi(ospite, dati, w);
+      const gg = dati._giorni ? ` · ${dati._giorni}g` : '';
       html += `<div class="storico-item">
-        <h4>${weekLabel(w)}</h4>
+        <h4>${weekLabel(w)}${gg}</h4>
         <div class="sintesi" style="margin-top:8px;">${s.testo}</div>
         <div style="margin-top:8px;">${s.badges.map(b=>`<span class="badge badge-${b.tipo}">${b.label}</span>`).join('')}</div>
         ${dati.note ? `<div style="font-size:12px;color:#666;margin-top:6px;font-style:italic;">${dati.note}</div>` : ''}
       </div>`;
     } else {
-      const compilati = Object.keys(week).filter(o => week[o]?._compilato).length;
+      const weekDates = getWeekDates(w);
+      const compilati = db.ospiti.filter(o =>
+        weekDates.some(d => db.giorni[d]?.[o]?._compilato) || db.settimane[w]?.[o]?._compilato
+      ).length;
       html += `<div class="storico-item" onclick="toggleStorico('${w}', this)">
         <h4>${weekLabel(w)}</h4>
-        <p>${compilati} ospiti compilati su ${db.ospiti.length} · tocca per espandere</p>
+        <p>${compilati} ospiti con dati · tocca per espandere</p>
         <div class="storico-detail" style="display:none;margin-top:12px;"></div>
       </div>`;
     }
@@ -1036,11 +1184,12 @@ function renderStorico() {
 function toggleStorico(w, el) {
   const detail = el.querySelector('.storico-detail');
   if (detail.style.display !== 'none') { detail.style.display = 'none'; return; }
-  const week = db.settimane[w] || {};
   let html = '';
   db.ospiti.forEach(o => {
-    if (!week[o]?._compilato) return;
-    const s = generaSintesi(o, week[o], w);
+    const dati = aggregateDayData(o, w)
+              || (db.settimane[w]?.[o]?._compilato ? db.settimane[w][o] : null);
+    if (!dati?._compilato) return;
+    const s = generaSintesi(o, dati, w);
     html += `<div style="margin-bottom:10px;padding-bottom:10px;border-bottom:1px solid #eee;">
       <strong>${o}</strong>
       <div style="font-size:13px;color:#444;margin-top:4px;">${s.testo.replace(/<[^>]+>/g,'')}</div>
