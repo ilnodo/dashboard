@@ -339,12 +339,14 @@ hr { border: none; border-top: 1px solid #eee; margin: 16px 0; }
 // ============================================================
 // CONFIGURAZIONE — DA MODIFICARE DOPO SETUP
 // ============================================================
-// Dopo aver creato la Dropbox App e pubblicato su GitHub Pages,
-// sostituisci questi due valori:
 const DROPBOX_APP_KEY = '5irp6ds6jip9snz';
-// Il redirect URI deve corrispondere ESATTAMENTE all'URL della tua
-// pagina GitHub Pages, es: https://tuonome.github.io/ilnodo/
 const REDIRECT_URI = window.location.origin + window.location.pathname;
+
+// TOKEN CONDIVISO — Incolla qui il token generato dalla console Dropbox
+// (App Console → tua app → "Generate access token")
+// Se compilato: nessun login richiesto su nessun dispositivo.
+// Lascia stringa vuota '' per usare il login OAuth normale.
+const SHARED_TOKEN = '';
 
 // ============================================================
 // DATI DEFAULT
@@ -443,11 +445,11 @@ function showToast(msg) {
 // OAUTH DROPBOX
 // ============================================================
 function startOAuth() {
+  if (SHARED_TOKEN) { init(SHARED_TOKEN); return; }
   if (DROPBOX_APP_KEY === 'INSERISCI_QUI_LA_TUA_APP_KEY') {
     alert('Configurazione non completata.\n\nModifica il file HTML e inserisci la tua Dropbox App Key.\nVedi la guida allegata per istruzioni.');
     return;
   }
-  // Salva la settimana corrente per dopo il redirect
   sessionStorage.setItem('pre_auth_week', currentWeek);
   const state = Math.random().toString(36).slice(2);
   localStorage.setItem('oauth_state', state);
@@ -456,7 +458,25 @@ function startOAuth() {
     `&redirect_uri=${encodeURIComponent(REDIRECT_URI)}` +
     `&response_type=token` +
     `&state=${state}`;
-  window.location.href = url;
+
+  // Apri OAuth in popup per evitare il dialogo Chrome "Disconnetti Dropbox"
+  const w = 600, h = 700;
+  const left = Math.max(0, (screen.width - w) / 2);
+  const top  = Math.max(0, (screen.height - h) / 2);
+  const popup = window.open(url, 'dropbox_oauth', `width=${w},height=${h},left=${left},top=${top}`);
+  if (!popup || popup.closed) {
+    // Popup bloccato dal browser: fallback alla navigazione diretta
+    window.location.href = url;
+    return;
+  }
+  window.addEventListener('message', function onMsg(e) {
+    if (e.origin !== window.location.origin) return;
+    if (e.data?.type === 'dropbox_token') {
+      window.removeEventListener('message', onMsg);
+      localStorage.setItem('il_nodo_token', e.data.token);
+      init(e.data.token);
+    }
+  });
 }
 
 function handleOAuthCallback() {
@@ -1582,17 +1602,34 @@ async function saveMansioni() {
 // BOOTSTRAP
 // ============================================================
 window.onload = function() {
-  // Controlla se torniamo da OAuth
   const callbackToken = handleOAuthCallback();
+
+  // Siamo nel popup OAuth: passa il token alla finestra principale e chiudi
+  if (callbackToken && window.opener) {
+    window.opener.postMessage({ type: 'dropbox_token', token: callbackToken }, window.location.origin);
+    window.close();
+    return;
+  }
+
   if (callbackToken) { init(callbackToken); return; }
 
-  // Token già salvato?
+  // Token condiviso configurato: accesso diretto senza login
+  if (SHARED_TOKEN) { init(SHARED_TOKEN); return; }
+
+  // Token OAuth salvato in precedenza
   const saved = localStorage.getItem('il_nodo_token');
   if (saved) { init(saved); return; }
 
   // Mostra login
   document.getElementById('loginScreen').style.display = 'flex';
 };
+
+// Auto-sync quando si torna sulla pagina/tab (Fix: visibilità cambio)
+document.addEventListener('visibilitychange', function() {
+  if (!document.hidden && !demoMode && accessToken) {
+    syncData();
+  }
+});
 </script>
 </body>
 </html>
