@@ -177,6 +177,55 @@ hr { border: none; border-top: 1px solid #eee; margin: 16px 0; }
   .activity-row { grid-template-columns: 1fr; align-items: start; }
   .activity-row .score-group { justify-content: flex-start; }
 }
+
+/* Griglia Mansioni */
+.griglia-wrap { overflow-x: auto; -webkit-overflow-scrolling: touch; margin: 0 -16px; padding: 0 0 8px; }
+.griglia-table { border-collapse: collapse; font-size: 12px; }
+.griglia-table th, .griglia-table td { border: 1px solid #e0e0e0; padding: 7px 4px; text-align: center; }
+.griglia-table th { background: #f0f7f4; color: #0a5c47; font-weight: bold; font-size: 11px; top: 0; }
+.g-col-mansione { text-align: left !important; min-width: 120px; max-width: 140px; white-space: normal; font-size: 12px; font-weight: bold; color: #222; position: sticky; left: 0; background: white; z-index: 1; padding-left: 8px !important; }
+th.g-col-mansione { background: #f0f7f4; z-index: 2; }
+.g-col-resp { min-width: 85px; }
+.g-resp-sel { width: 100%; border: none; font-size: 11px; background: transparent; color: #333; padding: 0; cursor: pointer; }
+.g-col-day { min-width: 36px; cursor: pointer; font-weight: bold; font-size: 15px; user-select: none; -webkit-tap-highlight-color: transparent; }
+.g-col-day:active { opacity: 0.6; }
+.g-today-head { background: #e8f4f0 !important; }
+.g-dayhead { font-size: 9px; color: #888; display: block; font-weight: normal; }
+.g-val-plus { background: #e8f5e9; color: #2e7d32; }
+.g-val-minus { background: #ffebee; color: #c62828; }
+.g-val-mixed { background: #fff8e1; color: #e65100; }
+
+/* Sintesi tabs */
+.sintesi-day-card { background: white; border-radius: 10px; padding: 12px 14px; margin-bottom: 8px; box-shadow: 0 1px 3px rgba(0,0,0,0.08); }
+.sintesi-day-card h4 { font-size: 14px; color: #0a5c47; margin-bottom: 6px; }
+.voto-pill { display: inline-block; padding: 2px 7px; border-radius: 10px; font-size: 11px; margin: 2px 3px 2px 0; font-weight: bold; }
+.voto-1 { background: #e8f5e9; color: #2e7d32; }
+.voto-2 { background: #fff8e1; color: #e65100; }
+.voto-3 { background: #ffebee; color: #c62828; }
+.voto-A { background: #f3e5f5; color: #7b1fa2; }
+.voto-AG { background: #e3f2fd; color: #1565c0; }
+.voto-plus { background: #e8f5e9; color: #2e7d32; }
+.voto-minus { background: #ffebee; color: #c62828; }
+
+/* Sigarette */
+.mode-tabs-3 { grid-template-columns: 1fr 1fr 1fr; }
+.sig-slot-tabs { display: flex; gap: 6px; margin-bottom: 12px; }
+.sig-slot-tab { flex: 1; padding: 10px 4px; border: 1.5px solid #ddd; border-radius: 8px; background: white; color: #555; cursor: pointer; font-family: Arial; font-size: 12px; text-align: center; line-height: 1.4; }
+.sig-slot-tab.active { background: #e8f4f0; border-color: #0a5c47; color: #0a5c47; font-weight: bold; }
+.sig-row { display: flex; align-items: center; gap: 10px; padding: 10px 0; border-bottom: 1px solid #f0f0f0; }
+.sig-row:last-child { border-bottom: none; }
+.sig-name { flex: 1; font-size: 14px; font-weight: bold; min-width: 0; overflow-wrap: anywhere; }
+.sig-input-wrap { display: flex; align-items: center; gap: 5px; flex-shrink: 0; }
+.sig-qty { width: 56px; padding: 7px; text-align: center; border: 1.5px solid #ddd; border-radius: 8px; font-size: 16px; font-weight: bold; font-family: Arial; }
+.sig-raz { font-size: 11px; color: #aaa; white-space: nowrap; }
+.sig-wrap { overflow-x: auto; -webkit-overflow-scrolling: touch; margin: 0 -16px; padding: 0 0 8px; }
+.sig-table { border-collapse: collapse; font-size: 11px; }
+.sig-table th, .sig-table td { border: 1px solid #e0e0e0; padding: 5px 3px; text-align: center; white-space: nowrap; }
+.sig-table th { background: #f0f7f4; color: #0a5c47; font-size: 10px; font-weight: bold; }
+.sig-th-ospite { position: sticky; left: 0; background: #f0f7f4 !important; z-index: 2; min-width: 28px; }
+.sig-td-day { position: sticky; left: 0; background: white; z-index: 1; font-weight: bold; font-size: 12px; }
+.sig-over { background: #ffebee; color: #c62828; font-weight: bold; }
+.sig-tot-row td { background: #f0f7f4; font-weight: bold; }
 </style>
 </head>
 <body>
@@ -212,8 +261,9 @@ hr { border: none; border-top: 1px solid #eee; margin: 16px 0; }
     </div>
 
     <div class="nav">
-      <button class="active" onclick="showTab('home', this)">Panoramica</button>
+      <button class="active" onclick="showTab('home', this)">Home</button>
       <button onclick="showTab('inserisci', this)">Inserisci</button>
+      <button onclick="showTab('griglia', this)">Griglia</button>
       <button onclick="showTab('sintesi', this)">Sintesi</button>
       <button onclick="showTab('storico', this)">Storico</button>
       <button onclick="showTab('impostazioni', this)">&#9881;</button>
@@ -247,9 +297,10 @@ hr { border: none; border-top: 1px solid #eee; margin: 16px 0; }
       </div>
       <input type="date" id="datePicker" class="inline-date-picker" onchange="changeDate(this.value)">
 
-      <div class="mode-tabs">
+      <div class="mode-tabs mode-tabs-3">
         <button id="modeOspiteBtn" class="mode-tab active" onclick="setInsertMode('ospite', this)" type="button">Per ospite</button>
         <button id="modeAttivitaBtn" class="mode-tab" onclick="setInsertMode('attivita', this)" type="button">Per attività</button>
+        <button id="modeSigaretteBtn" class="mode-tab" onclick="setInsertMode('sigarette', this)" type="button">Sigarette</button>
       </div>
 
       <div id="ospiteMode">
@@ -271,17 +322,61 @@ hr { border: none; border-top: 1px solid #eee; margin: 16px 0; }
         </div>
         <div id="formAttivita"></div>
       </div>
+
+      <div id="sigaretteMode" style="display:none;">
+        <div class="sig-slot-tabs" id="sigSlotTabs">
+          <button class="sig-slot-tab active" onclick="setSigSlot('m',this)" type="button">Mattina<br><small>ore 8:00</small></button>
+          <button class="sig-slot-tab" onclick="setSigSlot('p',this)" type="button">Pomeriggio<br><small>ore 14:00</small></button>
+          <button class="sig-slot-tab" onclick="setSigSlot('s',this)" type="button">Sera<br><small>ore 20:00</small></button>
+        </div>
+        <div class="card" id="sigForm"></div>
+      </div>
     </div>
 
     <!-- SINTESI -->
     <div id="tab-sintesi" class="section">
-      <div class="card">
-        <label>Ospite</label>
-        <select id="selSintesiOspite" onchange="renderSintesi()">
-          <option value="">— seleziona ospite —</option>
-        </select>
+      <div class="mode-tabs mode-tabs-3" style="margin-bottom:12px;">
+        <button id="sintesiModePaziente" class="mode-tab active" onclick="setSintesiMode('paziente',this)" type="button">Per paziente</button>
+        <button id="sintesiModeAttivita" class="mode-tab" onclick="setSintesiMode('attivita',this)" type="button">Per attività</button>
+        <button id="sintesiModeSigarette" class="mode-tab" onclick="setSintesiMode('sigarette',this)" type="button">Sigarette</button>
       </div>
-      <div id="sintesiContent"></div>
+
+      <!-- Per paziente -->
+      <div id="sintesiPazienteMode">
+        <div class="card">
+          <label>Ospite</label>
+          <select id="selSintesiOspite" onchange="renderSintesiPaziente()">
+            <option value="">— seleziona ospite —</option>
+          </select>
+        </div>
+        <div id="sintesiContent"></div>
+      </div>
+
+      <!-- Per attività -->
+      <div id="sintesiAttivitaMode" style="display:none;">
+        <div id="sintesiAttivitaContent"></div>
+      </div>
+
+      <!-- Sigarette -->
+      <div id="sintesiSigaretteMode" style="display:none;">
+        <div class="card" style="margin-bottom:8px;">
+          <label>Mese</label>
+          <input type="month" id="sigMonthPicker" onchange="renderSintesiSigarette()">
+        </div>
+        <div id="sintesiSigaretteContent"></div>
+      </div>
+    </div>
+
+    <!-- GRIGLIA MANSIONI -->
+    <div id="tab-griglia" class="section">
+      <div class="week-bar">
+        <input type="week" id="grigliaWeekPicker" onchange="changeGrigliaWeek(this.value)" />
+      </div>
+      <div class="card" style="padding:10px 0 0;">
+        <div class="sec-title" style="padding:0 14px 8px;">Mansioni settimanali</div>
+        <div class="legend" style="margin:0 14px 8px;">Tocca il giorno per cambiare valore · + / − / +−</div>
+        <div class="griglia-wrap" id="grigliaContainer"></div>
+      </div>
     </div>
 
     <!-- STORICO -->
@@ -327,6 +422,13 @@ hr { border: none; border-top: 1px solid #eee; margin: 16px 0; }
       </div>
 
       <div class="card">
+        <div class="sec-title">Razioni sigarette</div>
+        <p style="font-size:13px;color:#666;margin-bottom:10px;">Sigarette al giorno per turno (Mattina / Pomeriggio / Sera). Lascia 0 se l'ospite non fuma.</p>
+        <div id="sigConfigList"></div>
+        <button class="btn btn-primary" style="margin-top:10px;" onclick="saveSigConfig()">Salva razioni</button>
+      </div>
+
+      <div class="card">
         <div class="sec-title">Account</div>
         <p style="font-size:13px;color:#666;" id="accountInfo"></p>
         <button class="btn btn-secondary" style="margin-top:10px;" onclick="logout()">Disconnetti Dropbox</button>
@@ -346,7 +448,7 @@ const REDIRECT_URI = window.location.origin + window.location.pathname;
 // (App Console → tua app → "Generate access token")
 // Se compilato: nessun login richiesto su nessun dispositivo.
 // Lascia stringa vuota '' per usare il login OAuth normale.
-const SHARED_TOKEN = 'sl.u.AGd92AL9urpNwIBOQpgwMSzeT_vNt6iSErAb-ExOTLmuHeXoKuaA2FXfFS3Ef7GmUfxI9klwpbBMpfXK8uUuRID2dCPvWGRDjVs-KQTC81km5BHLgy-FBoqWQlPezxBEZbZ2DQ-IZ0u62cdfn7-POXgd4oJyHD6eVyhngrIzyFFXwfQSjbTFyScU0_BJ66Ck6SOtAYEvq4nB4yvMDKpSFOckh_HZO9zxBjxgIE55bwDdKuE20CsQR7Ze9eGDh-_pw0Lx4Skui38ePFAJ4w9qwxk2dLzxGAhD8jCAi9nMWmX1pNOHdSva1mllkBSPVmRwQRwHCW9GPNkVeXh9xeqfSwNXVnbQaoQUX0IWzJycqeEoQLTv2llv6P8AKelC3wtGhF98OAGb0sYXA4783fkaYfdehGfdgA2PnZrau3gBo3nr2OcPUBAG3Uvuo41gDVNQNO9RoOlHf2jtDD7ym4BDwY7xknNj0x9HNeH1SdVgIQ4TA7pj7zHdFfbh2z3yt2G0Wr0Ih_5TZvM2fXzBl8PEXdxYtKE-sWcJZz4Wcdsg3ZFMEGqzwWnn-cRJnZPEyXvZBjL4bq366hNAuCfTKtH_dD1i8lXz1P1dzQFDQPiPsFVTCLXIdjnU788rAxNeVjR0A9-GdAVNrcA9RP_5HZhTso6QKzZ-2ALssKYoKK-C7DkIwir_4e1eLy4RhUVsEaWINJq0DK23v63oC1LUsf1NL-lNO4tGUCuTe1HzVK5NhXXDqPh3NfuTQ8QRImYr-1TC36Uo5-aYRXYT6DnAJ2pHFSeJncovu__sMvH--_C5kQom600xA5w4oq9380gj7P8CZV4f1n1bcTcyVa9xOOQFZ2mGuvlmELSjK_2U-pRpGdLOOTcOeEGbUYY8vMEXMN17ZUh5ce66gJSnGWJ-KFVQZoq1rfTzWMaG-lMUi03qNg-Qynz64gOAe34LDZp2irIzTcOYsL-cf2bBXPg7cpbxJn6AxgKceS8ZujwC5dNIX5w2LXNlZrMLUJxGG5fxZqQyvx45K7sVYgTPHa_96elJRxbYD5LTMdcgC-DgI7kW9qd4PWh_0lRu3yDmhHF3hTdXZsuX3Ff63R4L8z_EKxbFSf_CpVAImGaQd1AGmZfneRIjJ9GbpF6oVzq2DmdaJWPBLJcc7P6NyvoG3zHcYJ2yPwOk-KM0PrMYmbOEyQk8GvyTytA7HF7ANAARKg0MaYB_NwGJojhc0MUE6frZQ3SSy99cUSjS4t7FpAo32BuDjbATbca9DRUXX3gEiso1Fr8aP1aoKkiXM34y2eRenu5lCVAa845CWvHOaSqhzqehjeArhhwq0H6_T1M3dq0r3hC6RKUVHH3h43gQuRQ4GRdjSNnHH2Jq86rfiJ0tiOqyQk9qO8ZR78FLYIe3_VJnIp62bz47JSNSc_KDmjbs21I8e9Rg';
+const SHARED_TOKEN = '';
 
 // ============================================================
 // DATI DEFAULT
@@ -370,13 +472,15 @@ const DBX_PATH = "/il_nodo_data.json";
 // ============================================================
 // STATO
 // ============================================================
-let db = { ospiti: [], attivita: [], mansioni: [], dimensioni: [], settimane: {}, giorni: {} };
+let db = { ospiti: [], attivita: [], mansioni: [], dimensioni: [], settimane: {}, giorni: {}, grigliaMansioni: {}, sigarette: { config: {}, giorni: {} } };
+let currentSintesiMode = 'paziente';
 let currentWeek = getTodayWeek();
 let currentDate  = getTodayDate();
 let accessToken  = null;
 let currentFormState = {};
 let activityFormState = {};
 let currentInsertMode = 'ospite';
+let currentSigSlot = 'm';
 let demoMode = false;
 
 // ============================================================
@@ -545,6 +649,10 @@ async function dbxLoad() {
     if (!db.dimensioni) db.dimensioni = [];
     if (!db.settimane) db.settimane = {};
     if (!db.giorni) db.giorni = {};
+    if (!db.grigliaMansioni) db.grigliaMansioni = {};
+    if (!db.sigarette) db.sigarette = { config: {}, giorni: {} };
+    if (!db.sigarette.config) db.sigarette.config = {};
+    if (!db.sigarette.giorni) db.sigarette.giorni = {};
   } catch(e) {
     console.warn('dbxLoad:', e);
   }
@@ -593,6 +701,8 @@ async function init(token) {
   db.dimensioni = [];
   db.settimane = {};
   db.giorni = {};
+  db.grigliaMansioni = {};
+  db.sigarette = { config: {}, giorni: {} };
 
   document.getElementById('loginScreen').style.display = 'none';
   document.getElementById('mainApp').style.display = 'block';
@@ -611,6 +721,8 @@ async function initDemo() {
   db.dimensioni = [];
   db.settimane = {};
   db.giorni = {};
+  db.grigliaMansioni = {};
+  db.sigarette = { config: {}, giorni: {} };
 
   document.getElementById('loginScreen').style.display = 'none';
   document.getElementById('mainApp').style.display = 'block';
@@ -629,6 +741,13 @@ function renderAll() {
   document.getElementById('headerWeek').textContent = weekLabel(currentWeek);
   const dp = document.getElementById('datePicker');
   if (dp) { dp.value = currentDate; updateDateLabel(); }
+  const gp = document.getElementById('grigliaWeekPicker');
+  if (gp) gp.value = currentWeek;
+  const mp = document.getElementById('sigMonthPicker');
+  if (mp && !mp.value) {
+    const now = new Date();
+    mp.value = `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}`;
+  }
   populateSelects();
   renderHome();
   renderImpostazioni();
@@ -668,6 +787,7 @@ function changeDate(d) {
   document.getElementById('datePicker')?.classList.remove('open');
   if (currentInsertMode === 'ospite' && document.getElementById('selOspite').value) renderFormOspite();
   if (currentInsertMode === 'attivita' && document.getElementById('selAttivita').value) renderFormAttivita();
+  if (currentInsertMode === 'sigarette') renderSigForm();
 }
 
 function populateSelects() {
@@ -705,17 +825,25 @@ function showTab(id, btn) {
   document.getElementById('tab-'+id).classList.add('active');
   if (btn) btn.classList.add('active');
   if (id === 'storico') renderStorico();
+  if (id === 'griglia') renderGriglia();
+  if (id === 'sintesi') {
+    if (currentSintesiMode === 'paziente') renderSintesiPaziente();
+    else if (currentSintesiMode === 'attivita') renderSintesiAttivita();
+    else if (currentSintesiMode === 'sigarette') renderSintesiSigarette();
+  }
 }
 
 function setInsertMode(mode, btn) {
   currentInsertMode = mode;
-  document.querySelectorAll('.mode-tab').forEach(b => b.classList.remove('active'));
+  document.querySelectorAll('#tab-inserisci .mode-tab').forEach(b => b.classList.remove('active'));
   if (btn) btn.classList.add('active');
   document.getElementById('ospiteMode').style.display = mode === 'ospite' ? 'block' : 'none';
   document.getElementById('attivitaMode').style.display = mode === 'attivita' ? 'block' : 'none';
+  document.getElementById('sigaretteMode').style.display = mode === 'sigarette' ? 'block' : 'none';
   document.getElementById('datePicker')?.classList.remove('open');
   if (mode === 'ospite') renderFormOspite();
   if (mode === 'attivita') renderFormAttivita();
+  if (mode === 'sigarette') renderSigForm();
 }
 
 function changeWeek(w) {
@@ -1047,32 +1175,6 @@ async function saveAttivitaData() {
 // ============================================================
 // SINTESI
 // ============================================================
-function renderSintesi() {
-  const ospite = document.getElementById('selSintesiOspite').value;
-  const container = document.getElementById('sintesiContent');
-  if (!ospite) { container.innerHTML = ''; return; }
-
-  const dati = aggregateDayData(ospite, currentWeek)
-            || (db.settimane[currentWeek]?.[ospite]?._compilato ? db.settimane[currentWeek][ospite] : null);
-  if (!dati?._compilato) {
-    container.innerHTML = `<div class="card"><div class="empty">Nessuna scheda per questa settimana.<br>Vai in "Inserisci" e compila almeno un giorno.</div></div>`;
-    return;
-  }
-
-  const s = generaSintesi(ospite, dati, currentWeek);
-  const giorni = dati._giorni ? `· ${dati._giorni} ${dati._giorni===1?'giorno':'giorni'} rilevati` : '';
-  const daysInfo = (dati._dates||[]).map(formatDateShort).join(', ');
-  container.innerHTML = `<div class="card">
-    <div class="ospite-header">
-      <div class="ospite-avatar">${initials(ospite)}</div>
-      <div><h2 style="font-size:17px;">${ospite}</h2><p style="font-size:12px;color:#888;">${weekLabel(currentWeek)} ${giorni}</p></div>
-    </div>
-    ${daysInfo ? `<div style="font-size:11px;color:#aaa;margin-bottom:10px;">Giorni: ${daysInfo}</div>` : ''}
-    <div class="sintesi">${s.testo}</div>
-    <div style="margin-top:12px;">${s.badges.map(b=>`<span class="badge badge-${b.tipo}">${b.label}</span>`).join('')}</div>
-    ${dati.note ? `<hr><div style="font-size:13px;color:#555;"><strong>Note:</strong> ${dati.note}</div>` : ''}
-  </div>`;
-}
 
 // ============================================================
 // AGGREGAZIONE GIORNALIERA → SETTIMANALE
@@ -1485,6 +1587,7 @@ function renderImpostazioni() {
       ? 'Modalità demo: i dati restano solo su questo browser e non vengono inviati a Dropbox.'
       : `Connesso a Dropbox. I dati sono salvati su il_nodo_data.json nel tuo account.`;
   renderDimensioni();
+  renderSigConfig();
 }
 
 // ============================================================
@@ -1599,6 +1702,461 @@ async function saveMansioni() {
 }
 
 // ============================================================
+// GRIGLIA MANSIONI
+// ============================================================
+function renderGriglia() {
+  const dates = getWeekDates(currentWeek);
+  const dayLabels = ['Lun','Mar','Mer','Gio','Ven','Sab','Dom'];
+  const oggi = getTodayDate();
+
+  if (!db.grigliaMansioni) db.grigliaMansioni = {};
+  if (!db.grigliaMansioni[currentWeek]) db.grigliaMansioni[currentWeek] = {};
+  const weekData = db.grigliaMansioni[currentWeek];
+
+  db.mansioni.forEach(m => {
+    if (!weekData[m]) weekData[m] = { responsabile: '', giorni: {} };
+  });
+
+  document.getElementById('grigliaWeekPicker').value = currentWeek;
+
+  let thead = `<tr><th class="g-col-mansione">Mansione</th><th class="g-col-resp">Responsabile</th>`;
+  dates.forEach((d, i) => {
+    const isToday = d === oggi;
+    thead += `<th class="g-col-day${isToday ? ' g-today-head' : ''}">${dayLabels[i]}<span class="g-dayhead">${d.slice(8)}</span></th>`;
+  });
+  thead += `</tr>`;
+
+  let tbody = '';
+  db.mansioni.forEach(m => {
+    const row = weekData[m] || { responsabile: '', giorni: {} };
+    const mEsc = m.replace(/\\/g,'\\\\').replace(/'/g,"\\'");
+    tbody += `<tr><td class="g-col-mansione">${m}</td>`;
+    tbody += `<td class="g-col-resp"><select class="g-resp-sel" onchange="setGrigliaResp('${mEsc}',this.value)">`;
+    tbody += `<option value="">—</option>`;
+    db.ospiti.forEach(o => {
+      tbody += `<option value="${o}"${row.responsabile===o?' selected':''}>${o}</option>`;
+    });
+    tbody += `</select></td>`;
+    dates.forEach(d => {
+      const val = row.giorni[d] || '';
+      const cls = val==='+'?'g-val-plus':val==='-'?'g-val-minus':val==='+/-'?'g-val-mixed':'';
+      const isToday = d === oggi;
+      tbody += `<td class="g-col-day ${cls}${isToday?' g-today-head':''}" onclick="cycleGrigliaVote('${mEsc}','${d}')">${val}</td>`;
+    });
+    tbody += `</tr>`;
+  });
+
+  document.getElementById('grigliaContainer').innerHTML =
+    `<table class="griglia-table"><thead>${thead}</thead><tbody>${tbody}</tbody></table>`;
+}
+
+function changeGrigliaWeek(w) {
+  currentWeek = w;
+  document.getElementById('headerWeek').textContent = weekLabel(w);
+  renderGriglia();
+}
+
+async function cycleGrigliaVote(mansione, date) {
+  if (!db.grigliaMansioni[currentWeek]) db.grigliaMansioni[currentWeek] = {};
+  if (!db.grigliaMansioni[currentWeek][mansione]) db.grigliaMansioni[currentWeek][mansione] = { responsabile: '', giorni: {} };
+  const vals = ['', '+', '-', '+/-'];
+  const cur = db.grigliaMansioni[currentWeek][mansione].giorni[date] || '';
+  db.grigliaMansioni[currentWeek][mansione].giorni[date] = vals[(vals.indexOf(cur)+1) % vals.length];
+  renderGriglia();
+  await dbxSave();
+}
+
+async function setGrigliaResp(mansione, responsabile) {
+  if (!db.grigliaMansioni[currentWeek]) db.grigliaMansioni[currentWeek] = {};
+  if (!db.grigliaMansioni[currentWeek][mansione]) db.grigliaMansioni[currentWeek][mansione] = { responsabile: '', giorni: {} };
+  db.grigliaMansioni[currentWeek][mansione].responsabile = responsabile;
+  await dbxSave();
+}
+
+// ============================================================
+// SINTESI — MODALITÀ
+// ============================================================
+function setSintesiMode(mode, btn) {
+  currentSintesiMode = mode;
+  document.querySelectorAll('#tab-sintesi .mode-tab').forEach(b => b.classList.remove('active'));
+  if (btn) btn.classList.add('active');
+  document.getElementById('sintesiPazienteMode').style.display = mode === 'paziente' ? 'block' : 'none';
+  document.getElementById('sintesiAttivitaMode').style.display = mode === 'attivita' ? 'block' : 'none';
+  document.getElementById('sintesiSigaretteMode').style.display = mode === 'sigarette' ? 'block' : 'none';
+  if (mode === 'paziente') renderSintesiPaziente();
+  if (mode === 'attivita') renderSintesiAttivita();
+  if (mode === 'sigarette') renderSintesiSigarette();
+}
+
+// ============================================================
+// SINTESI — PER PAZIENTE
+// ============================================================
+function renderSintesiPaziente() {
+  const ospite = document.getElementById('selSintesiOspite').value;
+  const container = document.getElementById('sintesiContent');
+  if (!ospite) { container.innerHTML = ''; return; }
+
+  const oggi = getTodayDate();
+  const last7 = [];
+  for (let i = 0; i < 7; i++) {
+    const dt = new Date(oggi + 'T12:00:00'); dt.setDate(dt.getDate()-i);
+    last7.push(`${dt.getFullYear()}-${String(dt.getMonth()+1).padStart(2,'0')}-${String(dt.getDate()).padStart(2,'0')}`);
+  }
+  const cutoff = last7[last7.length-1];
+
+  let html = `<div class="sec-title" style="margin-top:0;">Ultimi 7 giorni</div>`;
+  let hasDay = false;
+
+  last7.forEach(d => {
+    const data = db.giorni[d]?.[ospite];
+    if (!data?._compilato) return;
+    hasDay = true;
+    const att = (data.attivita||[]).filter(a=>a.voto);
+    const man = (data.mansioni||[]).filter(m=>m.voto);
+    const manPos = man.filter(m=>m.voto==='+').length;
+
+    html += `<div class="sintesi-day-card">
+      <h4>${formatDateShort(d)}${d===oggi?' <span style="font-size:11px;color:#888;">· oggi</span>':''}</h4>`;
+
+    if (att.length) {
+      html += `<div style="margin-bottom:4px;">`;
+      att.forEach(a => {
+        html += `<span class="voto-pill voto-${a.voto}">${a.nome} ${a.voto}</span>`;
+      });
+      html += `</div>`;
+    }
+    if (man.length) {
+      html += `<div>`;
+      man.forEach(m => {
+        html += `<span class="voto-pill ${m.voto==='+'?'voto-plus':'voto-minus'}">${m.nome} ${m.voto}</span>`;
+      });
+      html += `</div>`;
+    }
+    if (data.note) html += `<div style="font-size:12px;color:#888;margin-top:5px;font-style:italic;">${data.note}</div>`;
+    html += `</div>`;
+  });
+
+  if (!hasDay) html += `<div class="empty">Nessun dato negli ultimi 7 giorni.</div>`;
+
+  // Settimane precedenti
+  const weeksSet = new Set();
+  Object.keys(db.giorni||{}).forEach(d => { if (d < cutoff && db.giorni[d]?.[ospite]?._compilato) weeksSet.add(dateToWeek(d)); });
+  Object.keys(db.settimane||{}).forEach(w => { if (db.settimane[w]?.[ospite]?._compilato) weeksSet.add(w); });
+  const oldWeeks = Array.from(weeksSet).sort().reverse();
+
+  if (oldWeeks.length) {
+    html += `<div class="sec-title">Settimane precedenti</div>`;
+    oldWeeks.forEach(w => {
+      const dati = aggregateDayData(ospite, w) || (db.settimane[w]?.[ospite]?._compilato ? db.settimane[w][ospite] : null);
+      if (!dati?._compilato) return;
+      const s = generaSintesi(ospite, dati, w);
+      const gg = dati._giorni ? ` · ${dati._giorni}g` : '';
+      html += `<div class="storico-item" onclick="toggleSintesiWeek('${w}',this,'${ospite.replace(/'/g,"\\'")}')">
+        <h4>${weekLabel(w)}${gg}</h4>
+        <div style="margin-top:4px;">${s.badges.map(b=>`<span class="badge badge-${b.tipo}">${b.label}</span>`).join('')}</div>
+        <div class="week-detail" style="display:none;margin-top:10px;"></div>
+      </div>`;
+    });
+  }
+
+  container.innerHTML = html;
+}
+
+function toggleSintesiWeek(weekKey, el, ospite) {
+  const detail = el.querySelector('.week-detail');
+  if (detail.style.display !== 'none') { detail.style.display = 'none'; return; }
+
+  const dates = getWeekDates(weekKey);
+  let html = '';
+  dates.forEach(d => {
+    const data = db.giorni[d]?.[ospite];
+    if (!data?._compilato) return;
+    const att = (data.attivita||[]).filter(a=>a.voto);
+    const man = (data.mansioni||[]).filter(m=>m.voto);
+    html += `<div style="padding:8px 0;border-bottom:1px solid #f0f0f0;">
+      <strong style="font-size:13px;">${formatDateShort(d)}</strong>
+      <div style="margin-top:4px;">`;
+    att.forEach(a => { html += `<span class="voto-pill voto-${a.voto}">${a.nome} ${a.voto}</span>`; });
+    man.forEach(m => { html += `<span class="voto-pill ${m.voto==='+'?'voto-plus':'voto-minus'}">${m.nome} ${m.voto}</span>`; });
+    if (data.note) html += `<div style="font-size:11px;color:#888;font-style:italic;margin-top:3px;">${data.note}</div>`;
+    html += `</div></div>`;
+  });
+
+  if (!html) {
+    const dati = db.settimane[weekKey]?.[ospite];
+    if (dati?._compilato) {
+      const s = generaSintesi(ospite, dati, weekKey);
+      html = `<div class="sintesi" style="font-size:13px;">${s.testo}</div>`;
+    }
+  }
+  detail.innerHTML = html || '<div style="color:#aaa;font-size:12px;padding:6px 0;">Dettaglio non disponibile</div>';
+  detail.style.display = 'block';
+}
+
+// ============================================================
+// SINTESI — PER ATTIVITÀ
+// ============================================================
+function renderSintesiAttivita() {
+  const container = document.getElementById('sintesiAttivitaContent');
+
+  // Raccoglie occorrenze per attività
+  const attMap = {};
+  db.attivita.forEach(a => { attMap[a] = []; });
+
+  Object.keys(db.giorni||{}).sort().reverse().forEach(d => {
+    const dayData = db.giorni[d]; if (!dayData) return;
+    const ospCon = db.ospiti.filter(o => dayData[o]?._compilato);
+    if (!ospCon.length) return;
+    db.attivita.forEach(a => {
+      const parti = ospCon.map(o => {
+        const voto = (dayData[o]?.attivita||[]).find(x=>x.nome===a)?.voto||'';
+        return voto ? {ospite:o, voto} : null;
+      }).filter(Boolean);
+      if (parti.length) attMap[a].push({date:d, partecipanti:parti});
+    });
+  });
+
+  let html = '';
+  db.attivita.forEach(a => {
+    const occ = attMap[a];
+    if (!occ.length) return;
+    const ultima = occ[0];
+    const mediaPresenti = occ.reduce((s,o)=>{
+      const pres = o.partecipanti.filter(p=>p.voto!=='A'&&p.voto!=='AG').length;
+      return s + pres/o.partecipanti.length;
+    },0) / occ.length;
+    const aEsc = a.replace(/\\/g,'\\\\').replace(/'/g,"\\'");
+    html += `<div class="storico-item" onclick="toggleAttivitaDetail('${aEsc}',this)">
+      <h4>${a}</h4>
+      <p>${occ.length} sessioni · ultima: ${formatDateShort(ultima.date)} · presenza: ${Math.round(mediaPresenti*100)}%</p>
+      <div class="att-detail" style="display:none;margin-top:10px;"></div>
+    </div>`;
+  });
+
+  container.innerHTML = html || '<div class="empty">Nessun dato attività disponibile.</div>';
+}
+
+function toggleAttivitaDetail(attivitaNome, el) {
+  const detail = el.querySelector('.att-detail');
+  if (detail.style.display !== 'none') { detail.style.display = 'none'; return; }
+
+  const occ = [];
+  Object.keys(db.giorni||{}).sort().reverse().forEach(d => {
+    const dayData = db.giorni[d]; if (!dayData) return;
+    const ospCon = db.ospiti.filter(o => dayData[o]?._compilato);
+    const parti = ospCon.map(o => {
+      const voto = (dayData[o]?.attivita||[]).find(x=>x.nome===attivitaNome)?.voto||'';
+      return voto ? {ospite:o, voto} : null;
+    }).filter(Boolean);
+    if (parti.length) occ.push({date:d, partecipanti:parti});
+  });
+
+  let html = '';
+  occ.slice(0,20).forEach(o => {
+    const presenti = o.partecipanti.filter(p=>p.voto!=='A'&&p.voto!=='AG').length;
+    html += `<div style="margin-bottom:10px;padding-bottom:10px;border-bottom:1px solid #f0f0f0;">
+      <strong style="font-size:13px;">${formatDateShort(o.date)}</strong>
+      <span style="font-size:11px;color:#888;margin-left:6px;">${presenti}/${o.partecipanti.length} presenti</span>
+      <div style="margin-top:5px;">`;
+    o.partecipanti.forEach(p => {
+      html += `<span class="voto-pill voto-${p.voto}">${p.ospite} ${p.voto}</span>`;
+    });
+    html += `</div></div>`;
+  });
+
+  detail.innerHTML = html || '<div style="color:#aaa;font-size:12px;">Nessun dato</div>';
+  detail.style.display = 'block';
+}
+
+// ============================================================
+// SIGARETTE — INSERIMENTO
+// ============================================================
+function sigOspiteKey(o) { return o.replace(/[^a-zA-Z0-9]/g, '_'); }
+
+function setSigSlot(slot, btn) {
+  currentSigSlot = slot;
+  document.querySelectorAll('#sigSlotTabs .sig-slot-tab').forEach(b => b.classList.remove('active'));
+  if (btn) btn.classList.add('active');
+  renderSigForm();
+}
+
+function renderSigForm() {
+  const container = document.getElementById('sigForm');
+  if (!container) return;
+  if (!db.sigarette) db.sigarette = { config: {}, giorni: {} };
+
+  const slotLabel = { m: 'Mattina (ore 8:00)', p: 'Pomeriggio (ore 14:00)', s: 'Sera (ore 20:00)' };
+  const saved = db.sigarette.giorni[currentDate] || {};
+
+  let html = `<div class="sec-title" style="margin-bottom:8px;">${slotLabel[currentSigSlot]} — ${formatDateShort(currentDate)}</div>`;
+
+  db.ospiti.forEach(o => {
+    const cfg = db.sigarette.config[o] || {};
+    const raz = cfg[currentSigSlot] || 0;
+    const val = saved[o]?.[currentSigSlot];
+    const display = (val !== undefined && val !== null) ? val : '';
+    const key = sigOspiteKey(o);
+    html += `<div class="sig-row">
+      <div class="sig-name">${o}</div>
+      <div class="sig-input-wrap">
+        <input type="number" class="sig-qty" id="sig_${key}"
+          min="0" max="99" value="${display}" placeholder="${raz || '—'}"
+          oninput="sigHighlight(this,${raz})">
+        <span class="sig-raz">/ ${raz || '?'}</span>
+      </div>
+    </div>`;
+  });
+
+  html += `<button class="btn btn-primary" style="margin-top:12px;" onclick="saveSigData()">Salva turno</button>`;
+  container.innerHTML = html;
+}
+
+function sigHighlight(input, raz) {
+  if (raz > 0 && parseInt(input.value) > raz) input.style.borderColor = '#c62828';
+  else input.style.borderColor = '';
+}
+
+async function saveSigData() {
+  if (!db.sigarette) db.sigarette = { config: {}, giorni: {} };
+  if (!db.sigarette.giorni[currentDate]) db.sigarette.giorni[currentDate] = {};
+
+  db.ospiti.forEach(o => {
+    const input = document.getElementById('sig_' + sigOspiteKey(o));
+    if (!input) return;
+    const val = input.value.trim();
+    if (val === '') return;
+    if (!db.sigarette.giorni[currentDate][o]) db.sigarette.giorni[currentDate][o] = {};
+    db.sigarette.giorni[currentDate][o][currentSigSlot] = parseInt(val);
+  });
+
+  showToast('Salvataggio…');
+  await dbxSave();
+  showToast('Sigarette salvate ✓');
+}
+
+// ============================================================
+// SIGARETTE — SINTESI MENSILE
+// ============================================================
+function renderSintesiSigarette() {
+  const container = document.getElementById('sintesiSigaretteContent');
+  if (!container) return;
+  if (!db.sigarette) db.sigarette = { config: {}, giorni: {} };
+
+  const picker = document.getElementById('sigMonthPicker');
+  const month = picker?.value || (() => {
+    const n = new Date();
+    return `${n.getFullYear()}-${String(n.getMonth()+1).padStart(2,'0')}`;
+  })();
+
+  const [yr, mo] = month.split('-');
+  const daysInMonth = new Date(parseInt(yr), parseInt(mo), 0).getDate();
+  const slots = ['m','p','s'];
+
+  // Filtra solo ospiti che hanno razione > 0 o hanno dati nel mese
+  const ospiti = db.ospiti.filter(o => {
+    const cfg = db.sigarette.config[o] || {};
+    if (cfg.m || cfg.p || cfg.s) return true;
+    for (let d = 1; d <= daysInMonth; d++) {
+      const key = `${yr}-${mo}-${String(d).padStart(2,'0')}`;
+      if (db.sigarette.giorni[key]?.[o]) return true;
+    }
+    return false;
+  });
+
+  if (!ospiti.length) {
+    container.innerHTML = `<div class="empty">Nessuna razione configurata e nessun dato per questo mese.<br>Vai in Impostazioni → Razioni sigarette per configurare.</div>`;
+    return;
+  }
+
+  let html = `<div class="sig-wrap"><table class="sig-table"><thead>`;
+  html += `<tr><th class="sig-th-ospite">Giorno</th>`;
+  ospiti.forEach(o => {
+    html += `<th colspan="3">${o.split(' ')[0]}</th>`;
+  });
+  html += `</tr><tr><th class="sig-th-ospite"></th>`;
+  ospiti.forEach(() => { html += `<th>M</th><th>P</th><th>S</th>`; });
+  html += `</tr></thead><tbody>`;
+
+  const totals = {};
+  ospiti.forEach(o => { totals[o] = { m:0, p:0, s:0 }; });
+
+  for (let d = 1; d <= daysInMonth; d++) {
+    const dateKey = `${yr}-${mo}-${String(d).padStart(2,'0')}`;
+    const dayData = db.sigarette.giorni[dateKey];
+    html += `<tr><td class="sig-td-day">${d}</td>`;
+    ospiti.forEach(o => {
+      const cfg = db.sigarette.config[o] || {};
+      slots.forEach(sl => {
+        const raz = cfg[sl] || 0;
+        const val = dayData?.[o]?.[sl];
+        if (val !== undefined && val !== null) totals[o][sl] += val;
+        const display = (val !== undefined && val !== null) ? val : '';
+        const over = raz > 0 && val > raz;
+        html += `<td${over ? ' class="sig-over"' : ''}>${display}</td>`;
+      });
+    });
+    html += `</tr>`;
+  }
+
+  // Riga totali
+  html += `<tr class="sig-tot-row"><td class="sig-td-day" style="background:#f0f7f4;">Tot</td>`;
+  ospiti.forEach(o => {
+    slots.forEach(sl => {
+      const tot = totals[o][sl];
+      html += `<td>${tot || ''}</td>`;
+    });
+  });
+  html += `</tr></tbody></table></div>`;
+
+  container.innerHTML = html;
+}
+
+// ============================================================
+// SIGARETTE — CONFIGURAZIONE RAZIONI
+// ============================================================
+function renderSigConfig() {
+  const list = document.getElementById('sigConfigList');
+  if (!list) return;
+  if (!db.sigarette) db.sigarette = { config: {}, giorni: {} };
+
+  let html = `<div style="overflow-x:auto;"><table style="width:100%;border-collapse:collapse;font-size:13px;">
+    <thead><tr>
+      <th style="text-align:left;padding:7px 4px;color:#0a5c47;border-bottom:2px solid #e0e0e0;">Ospite</th>
+      <th style="padding:7px 6px;color:#0a5c47;border-bottom:2px solid #e0e0e0;text-align:center;">Mattina</th>
+      <th style="padding:7px 6px;color:#0a5c47;border-bottom:2px solid #e0e0e0;text-align:center;">Pomeriggio</th>
+      <th style="padding:7px 6px;color:#0a5c47;border-bottom:2px solid #e0e0e0;text-align:center;">Sera</th>
+    </tr></thead><tbody>`;
+
+  db.ospiti.forEach(o => {
+    const cfg = db.sigarette.config[o] || {};
+    const key = sigOspiteKey(o);
+    html += `<tr>
+      <td style="padding:5px 4px;font-weight:bold;border-bottom:1px solid #f0f0f0;">${o}</td>
+      <td style="padding:4px;text-align:center;border-bottom:1px solid #f0f0f0;"><input type="number" min="0" max="30" id="sigcfg_m_${key}" value="${cfg.m||''}" placeholder="0" style="width:50px;padding:5px;text-align:center;border:1px solid #ddd;border-radius:6px;font-size:13px;font-family:Arial;"></td>
+      <td style="padding:4px;text-align:center;border-bottom:1px solid #f0f0f0;"><input type="number" min="0" max="30" id="sigcfg_p_${key}" value="${cfg.p||''}" placeholder="0" style="width:50px;padding:5px;text-align:center;border:1px solid #ddd;border-radius:6px;font-size:13px;font-family:Arial;"></td>
+      <td style="padding:4px;text-align:center;border-bottom:1px solid #f0f0f0;"><input type="number" min="0" max="30" id="sigcfg_s_${key}" value="${cfg.s||''}" placeholder="0" style="width:50px;padding:5px;text-align:center;border:1px solid #ddd;border-radius:6px;font-size:13px;font-family:Arial;"></td>
+    </tr>`;
+  });
+
+  html += `</tbody></table></div>`;
+  list.innerHTML = html;
+}
+
+async function saveSigConfig() {
+  if (!db.sigarette) db.sigarette = { config: {}, giorni: {} };
+  db.ospiti.forEach(o => {
+    const key = sigOspiteKey(o);
+    const m = parseInt(document.getElementById(`sigcfg_m_${key}`)?.value) || 0;
+    const p = parseInt(document.getElementById(`sigcfg_p_${key}`)?.value) || 0;
+    const s = parseInt(document.getElementById(`sigcfg_s_${key}`)?.value) || 0;
+    db.sigarette.config[o] = { m, p, s };
+  });
+  showToast('Salvataggio…');
+  await dbxSave();
+  showToast('Razioni salvate ✓');
+}
+
+// ============================================================
 // BOOTSTRAP
 // ============================================================
 window.onload = function() {
@@ -1633,3 +2191,4 @@ document.addEventListener('visibilitychange', function() {
 </script>
 </body>
 </html>
+
