@@ -194,6 +194,32 @@ th.g-col-mansione { background: #f0f7f4; z-index: 2; }
 .g-val-plus { background: #e8f5e9; color: #2e7d32; }
 .g-val-minus { background: #ffebee; color: #c62828; }
 .g-val-mixed { background: #fff8e1; color: #e65100; }
+.g-col-presenza { min-width: 52px; cursor: pointer; user-select: none; -webkit-tap-highlight-color: transparent; font-size: 13px; font-weight: bold; color: #0a5c47; }
+.g-col-presenza:active { opacity: 0.6; }
+
+/* Mansioni editor custom */
+.mans-editor { display: flex; flex-direction: column; gap: 8px; }
+.mans-row { display: flex; align-items: flex-start; gap: 8px; background: white; border: 1px solid #ddd; border-radius: 8px; padding: 10px 10px 10px 12px; }
+.mans-row:focus-within { border-color: #0a5c47; box-shadow: 0 0 0 2px rgba(10,92,71,0.12); }
+.mans-row-fields { flex: 1; display: flex; flex-direction: column; gap: 5px; }
+.mans-row-num { font-size: 11px; color: #aaa; font-weight: bold; padding-top: 3px; min-width: 18px; }
+.mans-nome { width: 100%; border: none; border-bottom: 1px solid #eee; padding: 3px 0 5px; font-size: 14px; font-family: Arial; color: #222; outline: none; background: transparent; }
+.mans-nome:focus { border-bottom-color: #0a5c47; }
+.mans-desc { width: 100%; border: none; padding: 3px 0 0; font-size: 12px; font-family: Arial; color: #888; outline: none; background: transparent; }
+.mans-desc:focus { color: #444; }
+.mans-del { background: none; border: none; color: #ccc; font-size: 20px; line-height: 1; padding: 0 2px; cursor: pointer; flex-shrink: 0; align-self: center; }
+.mans-del:hover { color: #c62828; }
+.mans-desc-label { font-size: 11px; color: #aaa; }
+/* Descrizione in form inserisci */
+.mans-ins-desc { font-size: 12px; color: #999; margin-top: 2px; }
+
+/* Picker espanso in Inserisci */
+.ins-picker { display: flex; flex-direction: column; gap: 6px; }
+.ins-pick-item { background: white; border: 2px solid #ddd; border-radius: 10px; padding: 13px 16px; cursor: pointer; font-size: 14px; font-weight: bold; color: #333; -webkit-tap-highlight-color: transparent; }
+.ins-pick-item:active { opacity: 0.7; }
+.ins-pick-item.sel { border-color: #0a5c47; background: #f0f7f4; color: #0a5c47; }
+.ins-pick-sel { display: flex; justify-content: space-between; align-items: center; }
+.ins-pick-change { font-size: 12px; font-weight: normal; color: #888; }
 
 /* Sintesi tabs */
 .sintesi-day-card { background: white; border-radius: 10px; padding: 12px 14px; margin-bottom: 8px; box-shadow: 0 1px 3px rgba(0,0,0,0.08); }
@@ -261,11 +287,9 @@ th.g-col-mansione { background: #f0f7f4; z-index: 2; }
     </div>
 
     <div class="nav">
-      <button class="active" onclick="showTab('home', this)">Home</button>
+      <button class="active" onclick="showTab('home', this)">Panoramica</button>
       <button onclick="showTab('inserisci', this)">Inserisci</button>
-      <button onclick="showTab('griglia', this)">Griglia</button>
       <button onclick="showTab('sintesi', this)">Sintesi</button>
-      <button onclick="showTab('storico', this)">Storico</button>
       <button onclick="showTab('impostazioni', this)">&#9881;</button>
     </div>
 
@@ -298,12 +322,19 @@ th.g-col-mansione { background: #f0f7f4; z-index: 2; }
       <input type="date" id="datePicker" class="inline-date-picker" onchange="changeDate(this.value)">
 
       <div class="mode-tabs mode-tabs-3">
-        <button id="modeOspiteBtn" class="mode-tab active" onclick="setInsertMode('ospite', this)" type="button">Per ospite</button>
-        <button id="modeAttivitaBtn" class="mode-tab" onclick="setInsertMode('attivita', this)" type="button">Per attività</button>
+        <button id="modeAttivitaBtn" class="mode-tab active" onclick="setInsertMode('attivita', this)" type="button">Attività</button>
+        <button id="modeMansioniBtnIns" class="mode-tab" onclick="setInsertMode('mansioni', this)" type="button">Mansioni</button>
         <button id="modeSigaretteBtn" class="mode-tab" onclick="setInsertMode('sigarette', this)" type="button">Sigarette</button>
       </div>
 
-      <div id="ospiteMode">
+      <!-- Mansioni per ospite (solo assegnate) -->
+      <div id="mansioniInsMode" style="display:none;">
+        <div class="ins-picker" id="mansioniOspitePicker" style="margin-bottom:12px;"></div>
+        <div id="formMansioniOspite"></div>
+      </div>
+
+      <!-- Per ospite completo (nascosto, usato internamente) -->
+      <div id="ospiteMode" style="display:none;">
         <div class="card">
           <label>Ospite</label>
           <select id="selOspite" onchange="renderFormOspite()">
@@ -313,13 +344,8 @@ th.g-col-mansione { background: #f0f7f4; z-index: 2; }
         <div id="formOspite"></div>
       </div>
 
-      <div id="attivitaMode" style="display:none;">
-        <div class="card">
-          <label>Attività</label>
-          <select id="selAttivita" onchange="renderFormAttivita()">
-            <option value="">— seleziona attività —</option>
-          </select>
-        </div>
+      <div id="attivitaMode">
+        <div class="ins-picker" id="attivitaPicker" style="margin-bottom:12px;"></div>
         <div id="formAttivita"></div>
       </div>
 
@@ -367,31 +393,15 @@ th.g-col-mansione { background: #f0f7f4; z-index: 2; }
       </div>
     </div>
 
-    <!-- GRIGLIA MANSIONI -->
-    <div id="tab-griglia" class="section">
-      <div class="week-bar">
-        <input type="week" id="grigliaWeekPicker" onchange="changeGrigliaWeek(this.value)" />
-      </div>
-      <div class="card" style="padding:10px 0 0;">
-        <div class="sec-title" style="padding:0 14px 8px;">Mansioni settimanali</div>
-        <div class="legend" style="margin:0 14px 8px;">Tocca il giorno per cambiare valore · + / − / +−</div>
-        <div class="griglia-wrap" id="grigliaContainer"></div>
-      </div>
-    </div>
-
-    <!-- STORICO -->
-    <div id="tab-storico" class="section">
-      <div class="card">
-        <label>Ospite (lascia vuoto per tutte le settimane)</label>
-        <select id="selStoricoOspite" onchange="renderStorico()">
-          <option value="">— tutti gli ospiti —</option>
-        </select>
-      </div>
-      <div id="storicoContent"></div>
-    </div>
 
     <!-- IMPOSTAZIONI -->
     <div id="tab-impostazioni" class="section">
+      <div class="card" style="padding:12px 0 0; overflow:hidden;">
+        <div class="sec-title" style="padding:0 14px 8px;">Assegnazione mansioni settimanale</div>
+        <div class="legend" style="margin:0 14px 10px;">Tocca il giorno per cambiare valore &nbsp;·&nbsp; + / − / +−</div>
+        <div style="padding:0 14px 10px;"><input type="week" id="grigliaWeekPicker" onchange="changeGrigliaWeek(this.value)" style="width:100%;padding:8px 10px;border:1px solid #ddd;border-radius:8px;font-size:14px;font-family:Arial;"></div>
+        <div class="griglia-wrap" id="grigliaContainer" style="margin:0;"></div>
+      </div>
       <div class="card">
         <div class="sec-title">Lista ospiti</div>
         <div class="row-editor" id="ospiteRows">
@@ -408,10 +418,10 @@ th.g-col-mansione { background: #f0f7f4; z-index: 2; }
       </div>
       <div class="card">
         <div class="sec-title">Mansioni domestiche</div>
-        <div class="row-editor" id="mansioniRows">
-          <button class="add-row-btn" onclick="addRow('mansioniRows')">＋ Aggiungi mansione</button>
-        </div>
-        <button class="btn btn-primary" style="margin-top:10px;" onclick="saveMansioni()">Salva mansioni</button>
+        <p style="font-size:13px;color:#666;margin-bottom:12px;">Aggiungi, rimuovi o modifica le mansioni. La descrizione è opzionale e appare nel form di inserimento.</p>
+        <div class="mans-editor" id="mansioniEditor"></div>
+        <button class="btn btn-secondary" style="margin-top:10px;" onclick="addMansioneRow()">＋ Aggiungi mansione</button>
+        <button class="btn btn-primary" style="margin-top:8px;" onclick="saveMansioni()">Salva mansioni</button>
       </div>
       <div class="card">
         <div class="sec-title">Dimensioni di valutazione</div>
@@ -465,22 +475,27 @@ const DEFAULT_ATTIVITA = [
   "Laboratorio panificazione","Gruppo terapeutico"
 ];
 const DEFAULT_MANSIONI = [
-  "Pulizia camera","Colazione","Cucina","Refettorio / piatti",
-  "Lavaggio piatti","Pulizia spazi comuni","Corridoio","Tisane","Giro menù"
+  "Dispensa","Magazzino","Lavanderia","Spazzatura","Tempo libero",
+  "Capo officina (Geppetto)","Palestra","Pane","Tisane",
+  "Pulizia corridoio","Pulizia sala TV","Pulizia sala riunioni",
+  "Pulizia st. personale","Pulizia ufficio","Bagno del personale",
+  "Bagno ospiti","Spazi esterni","Ragnatele","Biscotti","Giro menù","Vetri"
 ];
 const DBX_PATH = "/il_nodo_data.json";
 
 // ============================================================
 // STATO
 // ============================================================
-let db = { ospiti: [], attivita: [], mansioni: [], dimensioni: [], settimane: {}, giorni: {}, grigliaMansioni: {}, sigarette: { config: {}, giorni: {} } };
+let db = { ospiti: [], attivita: [], mansioni: [], mansioniMeta: {}, dimensioni: [], settimane: {}, giorni: {}, grigliaMansioni: {}, sigarette: { config: {}, giorni: {} } };
 let currentSintesiMode = 'paziente';
 let currentWeek = getTodayWeek();
 let currentDate  = getTodayDate();
 let accessToken  = null;
 let currentFormState = {};
+let currentAttivitaSel = '';
+let currentMansioniOspiteSel = '';
 let activityFormState = {};
-let currentInsertMode = 'ospite';
+let currentInsertMode = 'attivita';
 let currentSigSlot = 'm';
 let demoMode = false;
 
@@ -651,6 +666,7 @@ async function dbxLoad() {
     if (!db.settimane) db.settimane = {};
     if (!db.giorni) db.giorni = {};
     if (!db.grigliaMansioni) db.grigliaMansioni = {};
+    if (!db.mansioniMeta) db.mansioniMeta = {};
     if (!db.sigarette) db.sigarette = { config: {}, giorni: {} };
     if (!db.sigarette.config) db.sigarette.config = {};
     if (!db.sigarette.giorni) db.sigarette.giorni = {};
@@ -699,6 +715,7 @@ async function init(token) {
   db.ospiti = [...DEFAULT_OSPITI];
   db.attivita = [...DEFAULT_ATTIVITA];
   db.mansioni = [...DEFAULT_MANSIONI];
+  db.mansioniMeta = {};
   db.dimensioni = [];
   db.settimane = {};
   db.giorni = {};
@@ -719,6 +736,7 @@ async function initDemo() {
   db.ospiti = [...DEFAULT_OSPITI];
   db.attivita = [...DEFAULT_ATTIVITA];
   db.mansioni = [...DEFAULT_MANSIONI];
+  db.mansioniMeta = {};
   db.dimensioni = [];
   db.settimane = {};
   db.giorni = {};
@@ -731,6 +749,7 @@ async function initDemo() {
   renderAll();
   showTab('inserisci', document.querySelectorAll('.nav button')[1]);
   setInsertMode('attivita', document.getElementById('modeAttivitaBtn'));
+  document.getElementById('attivitaMode').style.display = 'block';
   document.getElementById('accountInfo').textContent =
     'Modalità demo: i dati restano solo su questo browser e non vengono inviati a Dropbox.';
 }
@@ -786,35 +805,28 @@ function changeDate(d) {
   document.getElementById('headerWeek').textContent = weekLabel(currentWeek);
   updateDateLabel();
   document.getElementById('datePicker')?.classList.remove('open');
-  if (currentInsertMode === 'ospite' && document.getElementById('selOspite').value) renderFormOspite();
-  if (currentInsertMode === 'attivita' && document.getElementById('selAttivita').value) renderFormAttivita();
+  if (currentInsertMode === 'attivita' && currentAttivitaSel) renderFormAttivita();
+  if (currentInsertMode === 'mansioni' && currentMansioniOspiteSel) renderFormMansioniOspite();
   if (currentInsertMode === 'sigarette') renderSigForm();
 }
 
 function populateSelects() {
-  const selects = ['selOspite','selSintesiOspite','selStoricoOspite'];
-  const firsts = ['— seleziona ospite —','— seleziona ospite —','— tutti gli ospiti —'];
-  selects.forEach((id, i) => {
+  ['selOspite','selSintesiOspite'].forEach(id => {
     const sel = document.getElementById(id);
     if (!sel) return;
-    sel.innerHTML = `<option value="">${firsts[i]}</option>`;
+    const prev = sel.value;
+    sel.innerHTML = `<option value="">— seleziona ospite —</option>`;
     db.ospiti.forEach(o => {
       const opt = document.createElement('option');
       opt.value = o; opt.textContent = o;
       sel.appendChild(opt);
     });
+    if (db.ospiti.includes(prev)) sel.value = prev;
   });
-  const selAtt = document.getElementById('selAttivita');
-  if (selAtt) {
-    const prev = selAtt.value;
-    selAtt.innerHTML = '<option value="">— seleziona attività —</option>';
-    db.attivita.forEach(a => {
-      const opt = document.createElement('option');
-      opt.value = a; opt.textContent = a;
-      selAtt.appendChild(opt);
-    });
-    if (db.attivita.includes(prev)) selAtt.value = prev;
-  }
+  if (!db.attivita.includes(currentAttivitaSel)) currentAttivitaSel = '';
+  if (!db.ospiti.includes(currentMansioniOspiteSel)) currentMansioniOspiteSel = '';
+  renderAttivitaPicker();
+  renderMansioniOspitePicker();
 }
 
 // ============================================================
@@ -825,8 +837,7 @@ function showTab(id, btn) {
   document.querySelectorAll('.nav button').forEach(b => b.classList.remove('active'));
   document.getElementById('tab-'+id).classList.add('active');
   if (btn) btn.classList.add('active');
-  if (id === 'storico') renderStorico();
-  if (id === 'griglia') renderGriglia();
+  if (id === 'impostazioni') { renderImpostazioni(); renderGriglia(); }
   if (id === 'sintesi') {
     if (currentSintesiMode === 'paziente') renderSintesiPaziente();
     else if (currentSintesiMode === 'attivita') renderSintesiAttivita();
@@ -838,12 +849,13 @@ function setInsertMode(mode, btn) {
   currentInsertMode = mode;
   document.querySelectorAll('#tab-inserisci .mode-tab').forEach(b => b.classList.remove('active'));
   if (btn) btn.classList.add('active');
-  document.getElementById('ospiteMode').style.display = mode === 'ospite' ? 'block' : 'none';
+  document.getElementById('ospiteMode').style.display = 'none';
   document.getElementById('attivitaMode').style.display = mode === 'attivita' ? 'block' : 'none';
+  document.getElementById('mansioniInsMode').style.display = mode === 'mansioni' ? 'block' : 'none';
   document.getElementById('sigaretteMode').style.display = mode === 'sigarette' ? 'block' : 'none';
   document.getElementById('datePicker')?.classList.remove('open');
-  if (mode === 'ospite') renderFormOspite();
-  if (mode === 'attivita') renderFormAttivita();
+  if (mode === 'attivita') { renderAttivitaPicker(); if (currentAttivitaSel) renderFormAttivita(); }
+  if (mode === 'mansioni') { renderMansioniOspitePicker(); if (currentMansioniOspiteSel) renderFormMansioniOspite(); }
   if (mode === 'sigarette') renderSigForm();
 }
 
@@ -892,9 +904,10 @@ function renderHome() {
       document.getElementById('datePicker').value = oggi;
       updateDateLabel();
       document.querySelectorAll('.nav button')[1].click();
-      setInsertMode('ospite', document.getElementById('modeOspiteBtn'));
-      document.getElementById('selOspite').value = o;
-      renderFormOspite();
+      setInsertMode('mansioni', document.getElementById('modeMansioniBtnIns'));
+      currentMansioniOspiteSel = o;
+      renderMansioniOspitePicker();
+      renderFormMansioniOspite();
     };
     chips.appendChild(chip);
   });
@@ -1090,7 +1103,7 @@ function getSavedActivityVote(ospite, attivitaNome) {
 }
 
 function renderFormAttivita() {
-  const attivitaNome = document.getElementById('selAttivita')?.value || '';
+  const attivitaNome = currentAttivitaSel;
   const container = document.getElementById('formAttivita');
   if (!container) return;
   if (!attivitaNome) { container.innerHTML = ''; return; }
@@ -1133,7 +1146,7 @@ function setActivityScoreForOspite(idx, valore) {
 }
 
 async function saveAttivitaData() {
-  const attivitaNome = document.getElementById('selAttivita')?.value || '';
+  const attivitaNome = currentAttivitaSel;
   if (!attivitaNome) return;
   if (!db.giorni[currentDate]) db.giorni[currentDate] = {};
 
@@ -1465,71 +1478,6 @@ function generaSintesi(ospite, dati, week) {
   };
 }
 
-// ============================================================
-// STORICO
-// ============================================================
-function renderStorico() {
-  const ospite = document.getElementById('selStoricoOspite').value;
-  const container = document.getElementById('storicoContent');
-
-  // Unione settimane da giorni (nuovi) + settimane legacy
-  const weeksSet = new Set();
-  Object.keys(db.giorni || {}).forEach(d => weeksSet.add(dateToWeek(d)));
-  Object.keys(db.settimane || {}).forEach(w => weeksSet.add(w));
-  const settimane = Array.from(weeksSet).sort().reverse();
-
-  if (!settimane.length) {
-    container.innerHTML = `<div class="empty">Nessun dato storico ancora disponibile.</div>`;
-    return;
-  }
-
-  let html = '';
-  settimane.forEach(w => {
-    if (ospite) {
-      const dati = aggregateDayData(ospite, w)
-                || (db.settimane[w]?.[ospite]?._compilato ? db.settimane[w][ospite] : null);
-      if (!dati?._compilato) return;
-      const s = generaSintesi(ospite, dati, w);
-      const gg = dati._giorni ? ` · ${dati._giorni}g` : '';
-      html += `<div class="storico-item">
-        <h4>${weekLabel(w)}${gg}</h4>
-        <div class="sintesi" style="margin-top:8px;">${s.testo}</div>
-        <div style="margin-top:8px;">${s.badges.map(b=>`<span class="badge badge-${b.tipo}">${b.label}</span>`).join('')}</div>
-        ${dati.note ? `<div style="font-size:12px;color:#666;margin-top:6px;font-style:italic;">${dati.note}</div>` : ''}
-      </div>`;
-    } else {
-      const weekDates = getWeekDates(w);
-      const compilati = db.ospiti.filter(o =>
-        weekDates.some(d => db.giorni[d]?.[o]?._compilato) || db.settimane[w]?.[o]?._compilato
-      ).length;
-      html += `<div class="storico-item" onclick="toggleStorico('${w}', this)">
-        <h4>${weekLabel(w)}</h4>
-        <p>${compilati} ospiti con dati · tocca per espandere</p>
-        <div class="storico-detail" style="display:none;margin-top:12px;"></div>
-      </div>`;
-    }
-  });
-  container.innerHTML = html || `<div class="empty">Nessun dato per l'ospite selezionato.</div>`;
-}
-
-function toggleStorico(w, el) {
-  const detail = el.querySelector('.storico-detail');
-  if (detail.style.display !== 'none') { detail.style.display = 'none'; return; }
-  let html = '';
-  db.ospiti.forEach(o => {
-    const dati = aggregateDayData(o, w)
-              || (db.settimane[w]?.[o]?._compilato ? db.settimane[w][o] : null);
-    if (!dati?._compilato) return;
-    const s = generaSintesi(o, dati, w);
-    html += `<div style="margin-bottom:10px;padding-bottom:10px;border-bottom:1px solid #eee;">
-      <strong>${o}</strong>
-      <div style="font-size:13px;color:#444;margin-top:4px;">${s.testo.replace(/<[^>]+>/g,'')}</div>
-      <div style="margin-top:4px;">${s.badges.map(b=>`<span class="badge badge-${b.tipo}">${b.label}</span>`).join('')}</div>
-    </div>`;
-  });
-  detail.innerHTML = html || '<div class="empty">Nessuna scheda.</div>';
-  detail.style.display = 'block';
-}
 
 // ============================================================
 // IMPOSTAZIONI
@@ -1580,9 +1528,10 @@ function getRowValues(containerId) {
 }
 
 function renderImpostazioni() {
+  renderGriglia();
   initRowEditor('ospiteRows',   db.ospiti,   'Cognome...');
   initRowEditor('attivitaRows', db.attivita, 'Nome attività...');
-  initRowEditor('mansioniRows', db.mansioni, 'Nome mansione...');
+  renderMansioniEditor();
   document.getElementById('accountInfo').textContent =
     demoMode
       ? 'Modalità demo: i dati restano solo su questo browser e non vengono inviati a Dropbox.'
@@ -1697,9 +1646,203 @@ async function saveAttivita() {
   db.attivita = getRowValues('attivitaRows');
   await dbxSave(); populateSelects(); renderFormAttivita(); showToast('Attività salvate ✓');
 }
+function renderMansioniEditor() {
+  const editor = document.getElementById('mansioniEditor');
+  if (!editor) return;
+  if (!db.mansioniMeta) db.mansioniMeta = {};
+  editor.innerHTML = '';
+  db.mansioni.forEach((nome, i) => {
+    const desc = db.mansioniMeta[nome]?.desc || '';
+    editor.appendChild(_buildMansioneRow(i + 1, nome, desc));
+  });
+}
+
+function _buildMansioneRow(num, nome, desc) {
+  const row = document.createElement('div');
+  row.className = 'mans-row';
+  row.innerHTML = `
+    <span class="mans-row-num">${num}</span>
+    <div class="mans-row-fields">
+      <input type="text" class="mans-nome" value="${nome.replace(/"/g,'&quot;')}" placeholder="Nome mansione...">
+      <input type="text" class="mans-desc" value="${desc.replace(/"/g,'&quot;')}" placeholder="Descrizione o istruzioni (opzionale)...">
+    </div>
+    <button class="mans-del" onclick="removeMansioneRow(this)" title="Elimina">×</button>`;
+  return row;
+}
+
+function addMansioneRow() {
+  const editor = document.getElementById('mansioniEditor');
+  const num = editor.querySelectorAll('.mans-row').length + 1;
+  const row = _buildMansioneRow(num, '', '');
+  editor.appendChild(row);
+  row.querySelector('.mans-nome').focus();
+}
+
+function removeMansioneRow(btn) {
+  btn.closest('.mans-row').remove();
+  document.querySelectorAll('#mansioniEditor .mans-row-num').forEach((el, i) => { el.textContent = i + 1; });
+}
+
 async function saveMansioni() {
-  db.mansioni = getRowValues('mansioniRows');
-  await dbxSave(); showToast('Mansioni salvate ✓');
+  if (!db.mansioniMeta) db.mansioniMeta = {};
+  const rows = document.querySelectorAll('#mansioniEditor .mans-row');
+  const nomi = [];
+  const newMeta = {};
+  rows.forEach(row => {
+    const nome = row.querySelector('.mans-nome').value.trim();
+    const desc = row.querySelector('.mans-desc').value.trim();
+    if (!nome) return;
+    nomi.push(nome);
+    if (desc) newMeta[nome] = { desc };
+  });
+  if (!nomi.length) { alert('Inserisci almeno una mansione'); return; }
+  db.mansioni = nomi;
+  db.mansioniMeta = newMeta;
+  await dbxSave();
+  showToast('Mansioni salvate ✓');
+}
+
+// ============================================================
+// PICKER ESPANSI (Inserisci)
+// ============================================================
+function renderAttivitaPicker() {
+  const el = document.getElementById('attivitaPicker');
+  if (!el) return;
+  if (currentAttivitaSel) {
+    const esc = currentAttivitaSel.replace(/\\/g,'\\\\').replace(/'/g,"\\'");
+    el.innerHTML = `<div class="ins-pick-item sel ins-pick-sel" onclick="selectAttivita('${esc}')">
+      <span>${currentAttivitaSel}</span><span class="ins-pick-change">↩ cambia</span>
+    </div>`;
+  } else {
+    el.innerHTML = db.attivita.map(a => {
+      const esc = a.replace(/\\/g,'\\\\').replace(/'/g,"\\'");
+      return `<div class="ins-pick-item" onclick="selectAttivita('${esc}')">${a}</div>`;
+    }).join('');
+  }
+}
+
+function selectAttivita(nome) {
+  if (currentAttivitaSel === nome) {
+    currentAttivitaSel = '';
+    renderAttivitaPicker();
+    document.getElementById('formAttivita').innerHTML = '';
+  } else {
+    currentAttivitaSel = nome;
+    renderAttivitaPicker();
+    renderFormAttivita();
+  }
+}
+
+function renderMansioniOspitePicker() {
+  const el = document.getElementById('mansioniOspitePicker');
+  if (!el) return;
+  if (currentMansioniOspiteSel) {
+    const esc = currentMansioniOspiteSel.replace(/\\/g,'\\\\').replace(/'/g,"\\'");
+    el.innerHTML = `<div class="ins-pick-item sel ins-pick-sel" onclick="selectMansioniOspite('${esc}')">
+      <span>${currentMansioniOspiteSel}</span><span class="ins-pick-change">↩ cambia</span>
+    </div>`;
+  } else {
+    el.innerHTML = db.ospiti.map(o => {
+      const esc = o.replace(/\\/g,'\\\\').replace(/'/g,"\\'");
+      return `<div class="ins-pick-item" onclick="selectMansioniOspite('${esc}')">${o}</div>`;
+    }).join('');
+  }
+}
+
+function selectMansioniOspite(nome) {
+  if (currentMansioniOspiteSel === nome) {
+    currentMansioniOspiteSel = '';
+    renderMansioniOspitePicker();
+    document.getElementById('formMansioniOspite').innerHTML = '';
+  } else {
+    currentMansioniOspiteSel = nome;
+    renderMansioniOspitePicker();
+    renderFormMansioniOspite();
+  }
+}
+
+// ============================================================
+// MANSIONI PER OSPITE (solo assegnate dalla griglia)
+// ============================================================
+let mansioniFormState = {};
+
+function renderFormMansioniOspite() {
+  const ospite = currentMansioniOspiteSel;
+  const container = document.getElementById('formMansioniOspite');
+  if (!container) return;
+  if (!ospite) { container.innerHTML = ''; return; }
+
+  // Trova le mansioni assegnate a questo ospite nella settimana corrente
+  const weekData = db.grigliaMansioni?.[currentWeek] || {};
+  const assigned = db.mansioni.filter(m => weekData[m]?.responsabile === ospite);
+
+  if (!assigned.length) {
+    container.innerHTML = `<div class="card"><div class="empty" style="padding:20px 0;">Nessuna mansione assegnata a <strong>${ospite}</strong> questa settimana.<br><span style="font-size:12px;color:#aaa;">Vai in Mansioni (nav) per assegnarle.</span></div></div>`;
+    return;
+  }
+
+  const saved = db.giorni[currentDate]?.[ospite] || {};
+  const manSaved = saved.mansioni || [];
+
+  // Reset form state per questo ospite
+  mansioniFormState = {};
+  assigned.forEach(m => {
+    mansioniFormState[m] = manSaved.find(x => x.nome === m)?.voto || '';
+  });
+
+  let html = `<div class="card">
+    <div class="sec-title">${ospite} — ${formatDateShort(currentDate)}</div>
+    <div class="legend">+ = svolto &nbsp;·&nbsp; − = non svolto</div>`;
+
+  assigned.forEach((man, i) => {
+    const v = mansioniFormState[man];
+    const desc = db.mansioniMeta?.[man]?.desc || '';
+    const manEsc = man.replace(/\\/g,'\\\\').replace(/'/g,"\\'");
+    html += `<div class="act-block">
+      <div class="act-name">${man}${desc ? `<div class="mans-ins-desc">${desc}</div>` : ''}</div>
+      <div class="score-group" id="mans_ins_${i}">
+        <button class="score-btn ${v==='+'?'active-plus':''}" onclick="setMansioneVoto(${i},'${manEsc}','+')">+ Svolto</button>
+        <button class="score-btn ${v==='-'?'active-minus':''}" onclick="setMansioneVoto(${i},'${manEsc}','-')">− Non svolto</button>
+      </div>
+    </div>`;
+  });
+
+  html += `</div>
+    <button class="btn btn-primary" onclick="saveMansioniOspite('${ospite.replace(/\\/g,'\\\\').replace(/'/g,"\\'")}')">Salva mansioni</button>`;
+  container.innerHTML = html;
+}
+
+function setMansioneVoto(idx, mansione, valore) {
+  mansioniFormState[mansione] = valore;
+  const grp = document.getElementById(`mans_ins_${idx}`);
+  if (!grp) return;
+  grp.querySelectorAll('.score-btn').forEach(b => {
+    b.className = 'score-btn';
+    const bv = b.textContent.trim().startsWith('+') ? '+' : '-';
+    if (bv === valore) b.classList.add(valore === '+' ? 'active-plus' : 'active-minus');
+  });
+}
+
+async function saveMansioniOspite(ospite) {
+  if (!ospite) return;
+  if (!db.giorni[currentDate]) db.giorni[currentDate] = {};
+  const saved = db.giorni[currentDate][ospite] || {};
+  // Mantieni i voti esistenti per le mansioni NON assegnate a questo ospite
+  const existing = saved.mansioni || db.mansioni.map(m => ({ nome: m, voto: '' }));
+  const updated = existing.map(m => ({
+    nome: m.nome,
+    voto: mansioniFormState[m.nome] !== undefined ? mansioniFormState[m.nome] : (m.voto || '')
+  }));
+  db.giorni[currentDate][ospite] = {
+    ...saved,
+    mansioni: updated,
+    _compilato: true,
+    _savedAt: new Date().toISOString()
+  };
+  showToast('Salvataggio…');
+  await dbxSave();
+  renderHome();
+  showToast('Mansioni salvate ✓');
 }
 
 // ============================================================
@@ -1715,7 +1858,8 @@ function renderGriglia() {
   const weekData = db.grigliaMansioni[currentWeek];
 
   db.mansioni.forEach(m => {
-    if (!weekData[m]) weekData[m] = { responsabile: '', giorni: {} };
+    if (!weekData[m]) weekData[m] = { responsabile: '', giorni: {}, presenza: 0 };
+    if (weekData[m].presenza === undefined) weekData[m].presenza = 0;
   });
 
   document.getElementById('grigliaWeekPicker').value = currentWeek;
@@ -1725,7 +1869,7 @@ function renderGriglia() {
     const isToday = d === oggi;
     thead += `<th class="g-col-day${isToday ? ' g-today-head' : ''}">${dayLabels[i]}<span class="g-dayhead">${d.slice(8)}</span></th>`;
   });
-  thead += `</tr>`;
+  thead += `<th class="g-col-presenza">Pres.</th></tr>`;
 
   let tbody = '';
   db.mansioni.forEach(m => {
@@ -1744,6 +1888,8 @@ function renderGriglia() {
       const isToday = d === oggi;
       tbody += `<td class="g-col-day ${cls}${isToday?' g-today-head':''}" onclick="cycleGrigliaVote('${mEsc}','${d}')">${val}</td>`;
     });
+    const pres = row.presenza || 0;
+    tbody += `<td class="g-col-presenza" onclick="cycleGrigliaPresenza('${mEsc}')">${pres > 0 ? pres : '—'}</td>`;
     tbody += `</tr>`;
   });
 
@@ -1769,8 +1915,17 @@ async function cycleGrigliaVote(mansione, date) {
 
 async function setGrigliaResp(mansione, responsabile) {
   if (!db.grigliaMansioni[currentWeek]) db.grigliaMansioni[currentWeek] = {};
-  if (!db.grigliaMansioni[currentWeek][mansione]) db.grigliaMansioni[currentWeek][mansione] = { responsabile: '', giorni: {} };
+  if (!db.grigliaMansioni[currentWeek][mansione]) db.grigliaMansioni[currentWeek][mansione] = { responsabile: '', giorni: {}, presenza: 0 };
   db.grigliaMansioni[currentWeek][mansione].responsabile = responsabile;
+  await dbxSave();
+}
+
+async function cycleGrigliaPresenza(mansione) {
+  if (!db.grigliaMansioni[currentWeek]) db.grigliaMansioni[currentWeek] = {};
+  if (!db.grigliaMansioni[currentWeek][mansione]) db.grigliaMansioni[currentWeek][mansione] = { responsabile: '', giorni: {}, presenza: 0 };
+  const cur = db.grigliaMansioni[currentWeek][mansione].presenza || 0;
+  db.grigliaMansioni[currentWeek][mansione].presenza = cur >= 7 ? 0 : cur + 1;
+  renderGriglia();
   await dbxSave();
 }
 
