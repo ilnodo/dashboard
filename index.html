@@ -472,7 +472,7 @@ const REDIRECT_URI = window.location.origin + window.location.pathname;
 // (App Console → tua app → "Generate access token")
 // Se compilato: nessun login richiesto su nessun dispositivo.
 // Lascia stringa vuota '' per usare il login OAuth normale.
-const SHARED_TOKEN = 'sl.u.AGebnuPawgA-XoZrD7CoChhxvuoS1z0twybh_PYXxjyEP6dmCpUljJPH5NbueT_gyZlcoujznpoBI53-EacywrX2U5YOv4gnjDPiI7GRiOe0BW9CHf85Csjbsa-hSh3MI_LhdAjCofzJh6-z8Y5t8FmaSkQ-wyzMkWv9GLfoYO2mMQMxM7ld6pbRo_hx_g9kTxNANh826gMIMY5YE5VXrMk8Hn-Q__4cHLX7GP5GHe9go9rUgwNfY7pYTEYz9JY3TnlkvSQr1cCxODKNsfLbQMbqyrqgsmZ-1ZQN_-5n8qPIUo8M1Pp8DJl9yYdv4Yi94qM8L7Ut48w0pxYcKZ5VVd81JDmyzzQ9WvjTr01Y-1wE-Ftt870RMhSpTjDcYFOV4A_RolPRliadD1YO8VWcm538Kwc0_o2Ed3J9L-x4qdCWHyi98adzj5L05sbyki0LtLHPHEqP-3MPbYBKPiSNN3jzPN0WzivsdlSo_PIWW7zO4fMyhutqgqHkIkdh331o_u5Wzzcw_bZ0wP0rSJEDnI4AZldah72i7uU871sngLF_zfezYpH8jIClknaD2XtJU5pUaIEN-zBSO5yh6YpDj-QNBxXGuLKNK8eUGiLhKBMT2osbvy38aQlvKqz3aY-cwMLjJkuNG2hQG7HGnpYS7-Zc0joew2aFvG4QUj5tvOYj769spjBz8tCPepsFm75LrrYLMTViL7rF7pSng-Pt_QqfAqXH4Z-ca3A8k3Wz-1NrZNBcGW1Pubde-e1WT-QVz8Ir3RQv3Ur73U5X2JjzG7zS3yLR2BmJmGashH6agudTuIDcneb0s0Jy8Hj1uXEX4oQWozXxekrzYdw3iNDlA-PNBZVQo0YO4RXk-mgdMnc-7fFNAkOa6lx9sw4J_HC5gfte6Nnniy9EdKEvQDERM__AaRqCXbo9DNdk0rKVkx1TleoAorDBMMMVJdBBfJstv4pU7umwFlxd6y3Fq1ZB5Q7qvGabqKXYvaaf6agpKEI_B8XRRAh06yDKgcVn1PbGGx3uDRlGXvcDpIl5fxh7d4VMu3S0IiKa_BjyOz74vRfCUr1j_Guvco38BoX0UWlzA5sCoNpTejNlBGc7__903aWtfpqxKVjG_9mUFq9rbd1EFW9z0Xy-vsexVYTESjDAIa0HMwJxJIfWG1QVeTTxqZHZiBD6BK-mDKAniilGvYiXxk7BOq-S5_xk731vCXTop7MMEuEBA9Y7Y37UoEd_RtW6NbBaIdS_EsqHloKYOd6ETObNP5oGf6bcsOVjeMDbaDEwzNhq4V3EsuVjBQlaxWc8BCFo7BNYXKYFuQc1tQXxjmYYILbypuRu0OywIXVZmu0mDRr0UTiXykBHJFDOa9Pw9MDSTD55M6r_f-u6U1JMgyh-LL7d0UqyEcaTdSUb2TnkGbh2eW5XTRVXCDgnY0IB';
+const SHARED_TOKEN = '';
 
 
 // ============================================================
@@ -576,9 +576,21 @@ function showToast(msg) {
 }
 
 // ============================================================
-// OAUTH DROPBOX
+// OAUTH DROPBOX — PKCE (RFC 7636)
 // ============================================================
-function startOAuth() {
+function _pkceRandom(len) {
+  const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-._~';
+  const arr = new Uint8Array(len);
+  crypto.getRandomValues(arr);
+  return Array.from(arr, b => chars[b % chars.length]).join('');
+}
+async function _pkceChallenge(verifier) {
+  const buf = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(verifier));
+  return btoa(String.fromCharCode(...new Uint8Array(buf)))
+    .replace(/\+/g, '-').replace(/\//g, '_').replace(/=/g, '');
+}
+
+async function startOAuth() {
   if (SHARED_TOKEN) { init(SHARED_TOKEN); return; }
   if (DROPBOX_APP_KEY === 'INSERISCI_QUI_LA_TUA_APP_KEY') {
     alert('Configurazione non completata.\n\nModifica il file HTML e inserisci la tua Dropbox App Key.\nVedi la guida allegata per istruzioni.');
@@ -587,19 +599,25 @@ function startOAuth() {
   sessionStorage.setItem('pre_auth_week', currentWeek);
   const state = Math.random().toString(36).slice(2);
   localStorage.setItem('oauth_state', state);
+
+  const verifier = _pkceRandom(64);
+  localStorage.setItem('pkce_verifier', verifier);
+  const challenge = await _pkceChallenge(verifier);
+
   const url = `https://www.dropbox.com/oauth2/authorize` +
     `?client_id=${DROPBOX_APP_KEY}` +
     `&redirect_uri=${encodeURIComponent(REDIRECT_URI)}` +
-    `&response_type=token` +
+    `&response_type=code` +
+    `&code_challenge=${challenge}` +
+    `&code_challenge_method=S256` +
+    `&token_access_type=offline` +
     `&state=${state}`;
 
-  // Apri OAuth in popup per evitare il dialogo Chrome "Disconnetti Dropbox"
   const w = 600, h = 700;
   const left = Math.max(0, (screen.width - w) / 2);
   const top  = Math.max(0, (screen.height - h) / 2);
   const popup = window.open(url, 'dropbox_oauth', `width=${w},height=${h},left=${left},top=${top}`);
   if (!popup || popup.closed) {
-    // Popup bloccato dal browser: fallback alla navigazione diretta
     window.location.href = url;
     return;
   }
@@ -608,33 +626,85 @@ function startOAuth() {
     if (e.data?.type === 'dropbox_token') {
       window.removeEventListener('message', onMsg);
       localStorage.setItem('il_nodo_token', e.data.token);
+      if (e.data.refresh) localStorage.setItem('il_nodo_refresh', e.data.refresh);
       init(e.data.token);
     }
   });
 }
 
-function handleOAuthCallback() {
-  const hash = window.location.hash.substring(1);
-  if (!hash) return false;
-  const params = new URLSearchParams(hash);
-  const token = params.get('access_token');
+async function handleOAuthCallback() {
+  const params = new URLSearchParams(window.location.search);
+  const code = params.get('code');
   const state = params.get('state');
-  if (!token) return false;
+  if (!code) return false;
   const savedState = localStorage.getItem('oauth_state');
   if (state && savedState && state !== savedState) {
     alert('Errore di autenticazione. Riprova.');
     return false;
   }
   localStorage.removeItem('oauth_state');
+  const verifier = localStorage.getItem('pkce_verifier');
+  localStorage.removeItem('pkce_verifier');
+  const body = new URLSearchParams({
+    grant_type: 'authorization_code',
+    code,
+    redirect_uri: REDIRECT_URI,
+    client_id: DROPBOX_APP_KEY,
+    code_verifier: verifier
+  });
+  let token, refresh;
+  try {
+    const res = await fetch('https://api.dropboxapi.com/oauth2/token', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+      body: body.toString()
+    });
+    if (!res.ok) throw new Error(await res.text());
+    const data = await res.json();
+    token = data.access_token;
+    refresh = data.refresh_token;
+  } catch(e) {
+    console.error('Token exchange failed:', e);
+    alert('Errore di autenticazione Dropbox. Riprova.');
+    return false;
+  }
   localStorage.setItem('il_nodo_token', token);
-  // Rimuovi il token dall'URL
+  if (refresh) localStorage.setItem('il_nodo_refresh', refresh);
   history.replaceState(null, '', window.location.pathname);
   return token;
+}
+
+// Rinnova l'access token usando il refresh token salvato.
+// Ritorna il nuovo token, oppure null se non è possibile rinnovare.
+async function refreshAccessToken() {
+  const refresh = localStorage.getItem('il_nodo_refresh');
+  if (!refresh) return null;
+  const body = new URLSearchParams({
+    grant_type: 'refresh_token',
+    refresh_token: refresh,
+    client_id: DROPBOX_APP_KEY
+  });
+  try {
+    const res = await fetch('https://api.dropboxapi.com/oauth2/token', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+      body: body.toString()
+    });
+    if (!res.ok) return null;
+    const data = await res.json();
+    const token = data.access_token;
+    localStorage.setItem('il_nodo_token', token);
+    accessToken = token;
+    return token;
+  } catch(e) {
+    return null;
+  }
 }
 
 function logout() {
   if (demoMode) localStorage.removeItem('il_nodo_demo_data');
   localStorage.removeItem('il_nodo_token');
+  localStorage.removeItem('il_nodo_refresh');
   accessToken = null;
   demoMode = false;
   document.getElementById('mainApp').style.display = 'none';
@@ -667,7 +737,11 @@ async function dbxLoad() {
       }
     });
     if (res.status === 409) return; // file non esiste ancora, ok
-    if (res.status === 401) { logout(); return; }
+    if (res.status === 401) {
+      const newToken = await refreshAccessToken();
+      if (newToken) { await dbxLoad(); return; }
+      logout(); return;
+    }
     if (!res.ok) throw new Error('Errore download');
     const text = await res.text();
     const remote = JSON.parse(text);
@@ -704,7 +778,11 @@ async function dbxSave() {
       },
       body: blob
     });
-    if (res.status === 401) { logout(); return; }
+    if (res.status === 401) {
+      const newToken = await refreshAccessToken();
+      if (newToken) { await dbxSave(); return; }
+      logout(); return;
+    }
     if (!res.ok) throw new Error('Errore upload');
   } catch(e) {
     showToast('Errore salvataggio. Riprova.');
@@ -2354,8 +2432,8 @@ async function importSigaretteData() {
 // ============================================================
 // BOOTSTRAP
 // ============================================================
-window.onload = function() {
-  const callbackToken = handleOAuthCallback();
+window.onload = async function() {
+  const callbackToken = await handleOAuthCallback();
 
   // Siamo nel popup OAuth: passa il token alla finestra principale e chiudi
   if (callbackToken && window.opener) {
